@@ -43,16 +43,16 @@ jobs:
 
       - name: Run postgres client
         run: |
-           sleep 20
-           docker run \
+           ./check_exit_code_and_logs.sh  
+           'docker run \
            --name postgres_client \
            --network demo-network \
            --network-alias psql-client \
-           postgres:latest psql postgresql://postgres:pass123@psql-server:5432
+           postgres:latest psql postgresql://postgres:pass123@psql-server:5432'
       
       - name: Check exit status
         run: |
-          CONTAINER_STATUS=$(docker inspect postgres-server --format='{{.State.ExitCode}}')
+          CONTAINER_STATUS=$(docker inspect postgres_server --format='{{.State.ExitCode}}')
           if [ "$CONTAINER_STATUS" -eq 0 ]; then
             echo "Container exited successfully"
           else
@@ -62,7 +62,7 @@ jobs:
 
       - name: Check exit status
         run: |
-          CONTAINER_STATUS=$(docker inspect postgres-client --format='{{.State.ExitCode}}')
+          CONTAINER_STATUS=$(docker inspect postgres_client --format='{{.State.ExitCode}}')
           if [ "$CONTAINER_STATUS" -eq 0 ]; then
             echo "Container exited successfully"
           else
