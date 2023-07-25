@@ -31,7 +31,7 @@ jobs:
 
       - name: Run postgres client
         run: |
-           docker run -it --name postgres_client \
+           docker run --name postgres_client \
            --network demo-network \
            --network-alias psql-client \
            postgres:latest  \
