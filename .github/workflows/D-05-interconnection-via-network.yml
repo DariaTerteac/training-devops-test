@@ -43,8 +43,7 @@ jobs:
 
       - name: Run postgres client
         run: |
-           ./check_exit_code_and_logs.sh  
-           'docker run \
+           ./check_exit_code_and_logs.sh 'docker run \
            --name postgres_client \
            --network demo-network \
            --network-alias psql-client \
