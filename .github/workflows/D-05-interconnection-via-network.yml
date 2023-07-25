@@ -40,7 +40,7 @@ jobs:
           echo "Psql Server is not running"
           exit 1
           fi
-          
+
       - name: Run postgres client
         run: |
            sleep 20
@@ -59,7 +59,7 @@ jobs:
             echo "Container failed with exit status $CONTAINER_STATUS"
             exit 1
           fi
-          
+
       - name: Check exit status
         run: |
           CONTAINER_STATUS=$(docker inspect postgres-client --format='{{.State.ExitCode}}')
@@ -69,7 +69,7 @@ jobs:
             echo "Container failed with exit status $CONTAINER_STATUS"
             exit 1
           fi
-      
+
       - name: Setup tmate session
         if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3.11
