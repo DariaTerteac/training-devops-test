@@ -36,7 +36,7 @@ jobs:
           echo -e "pass123" | docker run --name postgres_client \
           --network demo-network \
           --network-alias psql-client \
-          -it postgres:latest \
+          -i postgres:latest \
           psql -h psql-server -U postgres
       
       - name: Check exit status
