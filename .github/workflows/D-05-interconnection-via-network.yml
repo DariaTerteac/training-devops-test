@@ -28,7 +28,7 @@ jobs:
            -p 6432:5432 \
            --network demo-network \
            --network-alias psql-server \
-           -e POSTGRES_PASSWORD=pass123\
+           -e POSTGRES_PASSWORD=pass123 \
            -e POSTGRES_DB=demodb \
            postgres:latest
 
