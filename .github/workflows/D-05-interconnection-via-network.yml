@@ -43,6 +43,7 @@ jobs:
           
       - name: Run postgres client
         run: |
+           sleep 20
            docker run \
            --name postgres_client \
            --network demo-network \
