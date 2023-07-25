@@ -32,14 +32,12 @@ jobs:
           postgres:14.5-alpine3.16
 
       - name: Run postgres client
-        env: 
-          POSTGRES_PASSWORD: 123
         run: |
-          docker run -d --name postgres-client \
+          echo -e "pass123" | docker run --name postgres_client \
           --network demo-network \
-          postgres:14.5-alpine3.16 \
-          -e POSTGRES_PASSWORD=123 \
-          psql -h postgres-alias -U dterteac
+          --network-alias psql-client \
+          -it postgres:latest \
+          psql -h psql-server -U postgres
       
       - name: Check exit status
         run: |
