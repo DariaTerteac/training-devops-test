@@ -31,11 +31,11 @@ jobs:
 
       - name: Run postgres client
         run: |
-           docker run -i --name postgres_client \
+           docker run -it --name postgres_client \
            --network demo-network \
            --network-alias psql-client \
            postgres:latest  \
-           psql postgresql://postgres:pass123@psql-server:5432/
+           psql postgresql://postgres:pass123@psql-server:5432
       
       - name: Check exit status
         run: |
