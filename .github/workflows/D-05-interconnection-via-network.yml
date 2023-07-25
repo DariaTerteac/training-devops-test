@@ -34,7 +34,7 @@ jobs:
 
       - name: Run postgres client
         run: |
-          docker run --name postgres_client --network demo-network --network-alias psql-client -e PGPASSWORD=123 postgres:latest psql -h psql-server -U dterteac
+          docker run --name postgres_client --network demo-network --network-alias psql-client -e PGPASSWORD=123 postgres:latest psql -h postgres-server -U dterteac
       
       - name: Check exit status
         run: |
