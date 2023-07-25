@@ -1,0 +1,57 @@
+name: D-05 Interconnection via Network
+
+on:
+  push:
+    paths:
+      - 'docker/05-interconnection-via-network/**'
+      - '.github/workflows/D-05-interconnection-via-network.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Verify Docker installation
+        run: docker version
+
+      - name: Create network
+        run: docker network create demo-network
+
+      - name: Run postgres-server
+        run: |
+          docker run --name postgres-server \
+          --network demo-network --network-alias postgres-alias \
+          -e POSTGRES_USER=dterteac \
+          -e POSTGRES_PASSWORD=123 \
+          -d \
+          -p 6432:5432 \
+          postgres:14.5-alpine3.16
+
+      - name: Run postgres client
+        env: 
+          POSTGRES_PASSWORD: 123
+        run: |
+          docker run -d --name postgres-client \
+          --network demo-network \
+          postgres:14.5-alpine3.16 \
+          psql -h postgres-alias -U dterteac
+      
+      - name: Check exit status
+        run: |
+          CONTAINER_STATUS=$(docker inspect postgres-server --format='{{.State.ExitCode}}')
+          if [ "$CONTAINER_STATUS" -eq 0 ]; then
+            echo "Container exited successfully"
+          else
+            echo "Container failed with exit status $CONTAINER_STATUS"
+            exit 1
+          fi
+      
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3.11
+          
+
