@@ -37,7 +37,7 @@ jobs:
           --network demo-network \
           --network-alias psql-client \
           -i postgres:latest \
-          psql -h psql-server -U postgres
+          psql -h postgres-server -U postgres
       
       - name: Check exit status
         run: |
