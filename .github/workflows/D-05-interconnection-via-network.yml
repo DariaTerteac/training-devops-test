@@ -23,11 +23,32 @@ jobs:
 
       - name: Run postgres-server
         run: |
-           docker run -d --name postgres_server --network demo-network --network-alias psql-server -e POSTGRES_PASSWORD=pass123 postgres:latest
+           docker run -d \
+           --name postgres_server \
+           -p 6432:5432 \
+           --network demo-network \
+           --network-alias psql-server \
+           -e POSTGRES_PASSWORD=pass123\
+           -e POSTGRES_DB=demodb \
+           postgres:latest
 
+      - name: Check status
+        run: |
+          STATUS=$(docker inspect -f '{{.State.Status}}' postgres_server)
+          echo "Psql Server status: ${STATUS}"
+          if [[ "${STATUS}" != "running" ]]; then
+          echo "Psql Server is not running"
+          exit 1
+          fi
+          
       - name: Run postgres client
         run: |
-           docker run --name postgres_client --network demo-network --network-alias psql-client -i postgres:latest psql "postgresql://postgres:pass123@psql-server:5432"
+           docker -i run \
+           --name postgres_client \
+           --network demo-network \
+           --network-alias psql-client \
+           postgres:latest \
+           psql postgresql://postgres:pass123@psql-server:5432
       
       - name: Check exit status
         run: |
