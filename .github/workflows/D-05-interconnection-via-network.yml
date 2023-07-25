@@ -27,20 +27,14 @@ jobs:
           --network demo-network \
           --network-alias postgres-server \
           -e POSTGRES_USER=dterteac \
-          -e POSTGRES_PASSWORD=123 \
+          -e PGPASSWORD=123 \
           -d \
           -p 6432:5432 \
           postgres:14.5-alpine3.16
 
       - name: Run postgres client
-        env: 
-          POSTGRES_PASSWORD: 123
         run: |
-          docker run --name postgres-client \
-          --network demo-network \
-          --network-alias postgres-client \
-          -i postgres:latest \
-           psql -h postgres-server -U postgres
+          docker run --name postgres_client --network demo-network --network-alias psql-client -e PGPASSWORD=123 postgres:latest psql -h psql-server -U dterteac
       
       - name: Check exit status
         run: |
