@@ -49,6 +49,16 @@ jobs:
             echo "Container failed with exit status $CONTAINER_STATUS"
             exit 1
           fi
+          
+      - name: Check exit status
+        run: |
+          CONTAINER_STATUS=$(docker inspect postgres-client --format='{{.State.ExitCode}}')
+          if [ "$CONTAINER_STATUS" -eq 0 ]; then
+            echo "Container exited successfully"
+          else
+            echo "Container failed with exit status $CONTAINER_STATUS"
+            exit 1
+          fi
       
       - name: Setup tmate session
         if: ${{ failure() }}
