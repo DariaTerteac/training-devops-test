@@ -89,7 +89,7 @@ jobs:
    - name: Check springboot site for status code
      uses: cygnetdigital/wait_for_response@v2.0.0
      with:
-      url: 'http://localhost:1808/'
+      url: 'http://localhost:18080/app'
       responseCode: '200'
       timeout: 200
       interval: 5
