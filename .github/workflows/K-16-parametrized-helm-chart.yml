@@ -81,8 +81,8 @@ jobs:
    - name: Check HTTP status of pgadmin and springboot sites
      uses: lakuapik/gh-actions-http-status@v1
      with:
-      sites: '["http://localhost:${{ env.SPRINGBOOT_API_PORT }}/app"]'
-      expected: '[200]'
+        sites: '["http://localhost:${{ env.SPRINGBOOT_API_PORT }}/app"]'
+        expected: '[200]'
       
    - name: Check if PGAdmin is abcent in the list of deployments
      run: |
