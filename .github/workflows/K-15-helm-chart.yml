@@ -40,7 +40,12 @@ jobs:
       fi
 
    - name: Create cluster with registry
-     run: k3d cluster create demo-cluster --registry-create demo-registry:12345
+     run: |
+        k3d cluster create demo-cluster \
+        --registry-create demo-registry:12345 \
+        -p 18081:8081@loadbalancer \
+        -p 18080:8080@loadbalancer \
+        -p 6432:6432@loadbalancer
 
    - name: Build, tag and push springboot
      run: |
@@ -57,10 +62,11 @@ jobs:
         ./kubernetes/15-helm-chart/demo-chart --namespace demo-chart --create-namespace \
         --set service.type=LoadBalancer --wait
 
-   - name: Forward the host ports by spring-boot and pgadmin to the ports, which are listening by the services
-     run: |
-      k3d cluster edit demo-cluster --port-add 18081:8081@loadbalancer
-      k3d cluster edit demo-cluster --port-add 18080:8080@loadbalancer
+#    - name: Forward the host ports by spring-boot and pgadmin to the ports, which are listening by the services
+#      run: |
+#       k3d cluster edit demo-cluster --port-add 18081:8081@loadbalancer
+#       k3d cluster edit demo-cluster --port-add 18080:8080@loadbalancer
+#       k3d cluster edit demo-cluster --port-add 6432:6432@loadbalancer
 
    - name: Check HTTP status of pgadmin and springboot sites
      uses: lakuapik/gh-actions-http-status@v1
@@ -68,9 +74,9 @@ jobs:
       sites: '["http://localhost:18081/app", "http://localhost:18080/login"'
       expected: '[200, 200]'
       
-   - name: PSQL
+   - name: PSQL connection
      run: |
-       ./check_exit_code_and_logs.sh  'psql postgresql://md_dterteac:123@database-service:6432/demodb'
+       ./check_exit_code_and_logs.sh  'psql postgresql://md_dterteac:123@localhost:6432/demodb'
        
    - name: Setup tmate session
      if: ${{ failure() }}
