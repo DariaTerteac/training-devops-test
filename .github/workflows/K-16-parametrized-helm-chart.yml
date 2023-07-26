@@ -82,23 +82,23 @@ jobs:
      run: | 
         available_deployments=$(kubectl get deployments -n demo-chart -o name)
         if ! echo "$available_deployments" | grep -q "deployment/pgadmin"; then
-        echo "Deployment is not present in the namespace."
+        echo "Deployment pgadmin is not present in the namespace."
         else
-        echo "Deployment is present in the namespace."
+        echo "Deployment pgadmin is present in the namespace."
         fi
    
    - name: Check Api web page
      run: |
        ./check_exit_code_and_logs.sh  'curl http://localhost:18080/app'
       
-   - name: Check pgadmin site
+   - name: Check Api web page status
      run: |
           status=$(curl -i http://localhost:18080/app | grep -oP 'HTTP/\d.*' | grep -oP '\d{3}')
           exit_code=$?
           if [ $exit_code -eq 0 ]; then
-          echo “pgAdmin does not exist.”
+          echo "Springboot api exists."
           else
-          echo “Unexpected error occurred with curl. Exit code: $exit_code”
+          echo "Springboot api does not exist. Exit code: $exit_code"
           exit 1
           fi
           fi
