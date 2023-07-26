@@ -25,10 +25,10 @@ jobs:
      run: |
       git submodule update --init --recursive submodules/springboot-api
       cp -r ./submodules/springboot-api ./kubernetes/15-helm-chart
-      if [ -d “./kubernetes/15-helm-chart/springboot-api” ]; then
-      echo “Submodule directory was copied successfully"
+      if [ -d './kubernetes/15-helm-chart/springboot-api' ]; then
+      echo "Submodule directory was copied successfully"
       else
-      echo “Submodule directory wasn't copied”
+      echo "Submodule directory wasn't copied"
       exit 1
       fi
 
@@ -37,7 +37,7 @@ jobs:
 
    - name: Build, tag and push springboot
      run: |
-      cd “${{ github.workspace }}/kubernetes/15-helm-chart/springboot-api/api”
+      cd "${{ github.workspace }}/kubernetes/15-helm-chart/springboot-api/api"
       DOCKER_BUILDKIT=1 docker build -f ./docker/Dockerfile.prod -t 15-springboot-api:0.1 .
 
       docker tag 15-springboot-api:0.1 localhost:12345/15-springboot-api:0.1
@@ -58,7 +58,7 @@ jobs:
    - name: Check HTTP status of pgadmin and springboot sites
      uses: lakuapik/gh-actions-http-status@v1
      with:
-      sites: '[“http://localhost:18081/app”, “http://localhost:18080/login”'
+      sites: '["http://localhost:18081/app", "http://localhost:18080/login"'
       expected: '[200, 200]'
 
    - name: Setup tmate session
