@@ -80,10 +80,10 @@ jobs:
    - name: Check if deployments are available
      run: | 
         available_deployments=$(kubectl get deployments -n demo-chart -o name)
-        if ! echo "$available_deployments" | grep -q "deployment/pgadmin; then
-        echo "Deployment is not present in the '$NAMESPACE' namespace."
+        if ! echo "$available_deployments" | grep -q "deployment/pgadmin"; then
+        echo "Deployment is not present in the namespace."
         else
-        echo "Deployment is present in the '$NAMESPACE' namespace."
+        echo "Deployment is present in the namespace."
         fi
       
 #    - name: Check springboot site for status code
