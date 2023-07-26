@@ -24,9 +24,9 @@ jobs:
      
    - name: Install PSQL
      run: |
-      sudo apt update
-      sudo apt install postgresql postgresql-contrib
-      sudo -u postgres psql
+      sudo apt-get update
+      sudo apt-get install -y postgresql-client
+      psql --version
 
    - name: Initialize and update submodule
      run: |
