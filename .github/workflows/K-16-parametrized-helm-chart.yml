@@ -1,4 +1,4 @@
-name: K-15 Helm Chart using springboot application, postgresql and pgadmin
+name: K-16 Helm Chart using springboot application, postgresql and pgadmin
 
 on:
  push:
