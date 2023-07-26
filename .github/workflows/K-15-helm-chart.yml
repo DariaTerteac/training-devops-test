@@ -53,15 +53,6 @@ jobs:
         -p ${{ env.PGADMIN_PORT }}:8081@loadbalancer \
         -p ${{ env.SPRINGBOOT_API_PORT }}:8080@loadbalancer \
         -p ${{ env.PSQL_PORT }}:6432@loadbalancer
-
-#    - name: Build, tag and push springboot
-#      run: |
-#       cd "${{ github.workspace }}/kubernetes/15-helm-chart/springboot-api/api"
-#       DOCKER_BUILDKIT=1 docker build -f ./docker/Dockerfile.prod -t 15-springboot-api:0.1 .
-
-#       docker tag 15-springboot-api:0.1 localhost:12345/15-springboot-api:0.1
-
-#       docker push localhost:12345/15-springboot-api:0.1
       
    - name: Build, tag and push the python image
      uses: docker/build-push-action@v4
@@ -88,7 +79,7 @@ jobs:
       
    - name: PSQL connection
      run: |
-       ./check_exit_code_and_logs.sh  'psql postgresql://md_dterteac:123@localhost:6432/demodb'
+       ./check_exit_code_and_logs.sh  'psql postgresql://md_dterteac:123@localhost:${{ env.PSQL_PORT }}/demodb'
        
    - name: Setup tmate session
      if: ${{ failure() }}
