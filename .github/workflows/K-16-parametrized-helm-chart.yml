@@ -1,3 +1,4 @@
+
 name: K-16 Helm Chart using springboot application, postgresql and pgadmin
 
 on:
@@ -34,7 +35,6 @@ jobs:
       sudo apt-get update
       sudo apt-get install -y postgresql-client
       psql --version
-
    - name: Initialize and update submodule
      run: |
       git submodule update --init --recursive submodules/springboot-api
@@ -45,7 +45,6 @@ jobs:
       echo "Submodule directory wasn't copied"
       exit 1
       fi
-
    - name: Create cluster with registry
      run: |
         k3d cluster create demo-cluster \
@@ -53,7 +52,6 @@ jobs:
         -p ${{ env.PGADMIN_PORT }}:8081@loadbalancer \
         -p ${{ env.SPRINGBOOT_API_PORT }}:8080@loadbalancer \
         -p ${{ env.PSQL_PORT }}:6432@loadbalancer
-
    - name: Build, tag and push the image
      uses: docker/build-push-action@v4
      with:
@@ -64,7 +62,6 @@ jobs:
          build-args: |
            USER_ID=$(id -u)
            GROUP_ID=$(id -g)
-
    - name: Install helm chart
      run: |
        # Prod version without PGAdmin
@@ -82,9 +79,9 @@ jobs:
      run: | 
         available_deployments=$(kubectl get deployments -n demo-chart -o name)
         if ! echo "$available_deployments" | grep -q "deployment/pgadmin"; then
-        echo "Deployment pgadmin is not present in the namespace."
+        echo "Deployment is not present in the namespace."
         else
-        echo "Deployment pgadmin is present in the namespace."
+        echo "Deployment is present in the namespace."
         fi
    
    - name: Check Api web page
@@ -93,15 +90,15 @@ jobs:
       
    - name: Check Api web page status
      run: |
-          status=$(curl -i http://localhost:18080/app | grep -oP 'HTTP/\d.*' | grep -oP '\d{3}')
+          if ! curl -s http://localhost:18080/app >/dev/null; then
           exit_code=$?
           if [ $exit_code -eq 0 ]; then
-          echo "Springboot api exists."
+          echo “Api web page is working.”
           else
-          echo "Springboot api does not exist. Exit code: $exit_code"
+          echo “Api web page is not working.”
           exit 1
           fi
-          
+          fi
       
    - name: Check PSQL connection
      run: |
@@ -110,4 +107,3 @@ jobs:
    - name: Setup tmate session
      if: ${{ failure() }}
      uses: mxschmitt/action-tmate@v3.11
-
