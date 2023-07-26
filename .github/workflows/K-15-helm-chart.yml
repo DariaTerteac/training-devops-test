@@ -9,6 +9,13 @@ on:
 jobs:
  build:
   runs-on: ubuntu-latest
+  
+  env: 
+    SRC_FOLDER: "${{ github.workspace }}/kubernetes/15-helm-chart/springboot-api/api/docker"
+    PGADMIN_PORT: "18081"
+    SPRINGBOOT_API_PORT: "18080"
+    PSQL_PORT: "6432"
+      
   steps:
    - name: Checkout repository
      uses: actions/checkout@v3
@@ -43,18 +50,29 @@ jobs:
      run: |
         k3d cluster create demo-cluster \
         --registry-create demo-registry:12345 \
-        -p 18081:8081@loadbalancer \
-        -p 18080:8080@loadbalancer \
-        -p 6432:6432@loadbalancer
+        -p ${{ env.PGADMIN_PORT }}:8081@loadbalancer \
+        -p ${{ env.SPRINGBOOT_API_PORT }}:8080@loadbalancer \
+        -p ${{ env.PSQL_PORT }}:6432@loadbalancer
 
-   - name: Build, tag and push springboot
-     run: |
-      cd "${{ github.workspace }}/kubernetes/15-helm-chart/springboot-api/api"
-      DOCKER_BUILDKIT=1 docker build -f ./docker/Dockerfile.prod -t 15-springboot-api:0.1 .
+#    - name: Build, tag and push springboot
+#      run: |
+#       cd "${{ github.workspace }}/kubernetes/15-helm-chart/springboot-api/api"
+#       DOCKER_BUILDKIT=1 docker build -f ./docker/Dockerfile.prod -t 15-springboot-api:0.1 .
 
-      docker tag 15-springboot-api:0.1 localhost:12345/15-springboot-api:0.1
+#       docker tag 15-springboot-api:0.1 localhost:12345/15-springboot-api:0.1
 
-      docker push localhost:12345/15-springboot-api:0.1
+#       docker push localhost:12345/15-springboot-api:0.1
+      
+   - name: Build, tag and push the python image
+     uses: docker/build-push-action@v4
+     with:
+         context: ${{ env.SRC_FOLDER }}
+         file: ${{ env.SRC_FOLDER }}/Dockerfile.prod
+         push: true 
+         tags: localhost:12345/15-springboot-api:0.1
+         build-args: |
+           USER_ID=$(id -u)
+           GROUP_ID=$(id -g)
 
    - name: Install helm chart
      run: |
@@ -62,16 +80,10 @@ jobs:
         ./kubernetes/15-helm-chart/demo-chart --namespace demo-chart --create-namespace \
         --set service.type=LoadBalancer --wait
 
-#    - name: Forward the host ports by spring-boot and pgadmin to the ports, which are listening by the services
-#      run: |
-#       k3d cluster edit demo-cluster --port-add 18081:8081@loadbalancer
-#       k3d cluster edit demo-cluster --port-add 18080:8080@loadbalancer
-#       k3d cluster edit demo-cluster --port-add 6432:6432@loadbalancer
-
    - name: Check HTTP status of pgadmin and springboot sites
      uses: lakuapik/gh-actions-http-status@v1
      with:
-      sites: '["http://localhost:18081/app", "http://localhost:18080/login"'
+      sites: '["http://localhost:${{ env.PGADMIN_PORT }}/app", "http://localhost:${{ env.SPRINGBOOT_API_PORT }}/login"'
       expected: '[200, 200]'
       
    - name: PSQL connection
