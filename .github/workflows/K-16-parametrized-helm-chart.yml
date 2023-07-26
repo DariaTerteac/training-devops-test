@@ -67,10 +67,10 @@ jobs:
 
    - name: Install helm chart
      run: |
-       helm upgrade --install --cleanup-on-fail demo-chart \
-        ./kubernetes/16-parametrized-helm-chart/demo-chart --namespace demo-chart --create-namespace \
-        --set service.type=LoadBalancer --wait \
-        --set pgadmin.enabled=false
+       helm upgrade --install --cleanup-on-fail demo-chart ./demo-chart \
+       --namespace demo-chart --create-namespace \
+       --set service.type=LoadBalancer \
+       --set pgadmin.enabled=false --wait
 
    - name: Check HTTP status of pgadmin and springboot sites
      uses: lakuapik/gh-actions-http-status@v1
