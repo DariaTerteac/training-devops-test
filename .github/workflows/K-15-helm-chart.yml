@@ -11,7 +11,7 @@ jobs:
   runs-on: ubuntu-latest
   
   env: 
-    SRC_FOLDER: "${{ github.workspace }}/kubernetes/15-helm-chart/springboot-api/api/docker"
+    SRC_FOLDER: "${{ github.workspace }}/kubernetes/15-helm-chart/springboot-api/api"
     PGADMIN_PORT: "18081"
     SPRINGBOOT_API_PORT: "18080"
     PSQL_PORT: "6432"
@@ -67,7 +67,7 @@ jobs:
      uses: docker/build-push-action@v4
      with:
          context: ${{ env.SRC_FOLDER }}
-         file: ${{ env.SRC_FOLDER }}/Dockerfile.prod
+         file: ${{ env.SRC_FOLDER }}/docker/Dockerfile.prod
          push: true 
          tags: localhost:12345/15-springboot-api:0.1
          build-args: |
