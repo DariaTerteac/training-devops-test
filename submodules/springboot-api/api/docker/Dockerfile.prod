@@ -1,0 +1,25 @@
+FROM powerman/dockerize:0.19.0 AS DOCKERIZE
+FROM maven:3.9.0-eclipse-temurin-17-alpine as BUILDER
+
+WORKDIR /usr/src/app
+
+COPY ./pom.xml ./pom.xml
+COPY ./src ./src
+
+RUN --mount=type=cache,target=/root/.m2 mvn package -DskipTests
+
+FROM eclipse-temurin:17.0.6_10-jre-alpine
+
+WORKDIR /usr/src/app
+
+ENV SERVER_PORT=80
+ENV DB_SHOW_SQL=false
+
+COPY --from=DOCKERIZE /usr/local/bin/dockerize /usr/local/bin/
+COPY --from=BUILDER /usr/src/app/target/*.jar ./api.jar
+
+RUN apk add --no-cache openssl
+
+EXPOSE ${SERVER_PORT}
+
+ENTRYPOINT [ "java", "-jar", "api.jar" ]
