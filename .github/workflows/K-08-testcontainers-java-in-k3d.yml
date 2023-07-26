@@ -1,0 +1,124 @@
+name: K-08 Java Testcontainers with Report Accessible in Docker
+
+on:
+  push:
+    paths:
+      - ".github/workflows/K-08-testcontainers-java-in-k3d.yml"
+      - "kubernetes/08-testcontainers-java-in-k3d/**"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set environment variables
+        run: |
+          echo "USER_ID=$(id -u)" >> $GITHUB_ENV
+          echo "GROUP_ID=$(id -g)" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup k3d
+        uses: nolar/setup-k3d-k3s@v1
+
+      - name: Verify Docker installation
+        run: docker version
+
+      - name: Verify Kubernetes installation
+        run: k3d --version
+
+      - name: Initialize and update submodule
+        run: |
+          git submodule update --init --recursive
+          cp -r ./submodules/testcontainers-java ./kubernetes/08-testcontainers-java-in-k3d/src
+
+      - name: Create report folder and check if it was successfully created
+        run: |
+          mkdir ./kubernetes/08-testcontainers-java-in-k3d/report
+          if [ -d "${{ github.workspace }}/kubernetes/08-testcontainers-java-in-k3d/report" ]; then
+            echo "Report folder was created"
+            ls ./kubernetes/08-testcontainers-java-in-k3d/report
+          else
+            echo "Report folder wasn't created"
+            exit 1
+          fi
+
+      - name: Create cluster with registry
+        run: |
+          k3d cluster create demo-cluster \
+          --registry-create demo-registry:12345 \
+          --volume ${{ github.workspace }}/kubernetes/08-testcontainers-java-in-k3d/report:/report
+
+      - name: Check cluster existence
+        run: |
+          CLUSTER_EXISTS=$(k3d cluster list | grep -c "demo-cluster")
+          if [ "$CLUSTER_EXISTS" -eq 1 ]; then
+             echo "Cluster exists"
+          else
+             echo "Cluster does not exist"
+             exit 1
+          fi
+
+      - name: Build, tag and push Docker image
+        run: |
+          docker build -t 08-tc-java-in-k3d:0.1 --build-arg USER_ID=${{ env.USER_ID }} --build-arg GROUP_ID=${{ env.GROUP_ID }} \
+          ./kubernetes/08-testcontainers-java-in-k3d/src
+          
+          docker tag 08-tc-java-in-k3d:0.1 localhost:12345/08-tc-java-in-k3d:0.1
+          
+          docker push localhost:12345/08-tc-java-in-k3d:0.1
+
+      - name: Apply manifest
+        run: |
+            kubectl apply -f ./kubernetes/08-testcontainers-java-in-k3d/manifests
+            sleep 20
+
+      - name: Watch `testcontainers-java` container logs
+        run: |
+          kubectl logs tc-java -c testcontainers-java --follow > 08-task-logs.txt
+          BUILD_OUTPUT=$(grep "BUILD SUCCESSFUL" 08-task-logs.txt)
+          echo "BUILD_OUTPUT=${BUILD_OUTPUT}" >> $GITHUB_ENV
+      
+      - name: Check `testcontainers-java` exit status
+        run: |
+         CONTAINER_EXIT_CODE=$(kubectl get pod tc-java -n default -o jsonpath='{.status.containerStatuses[?(@.name=="testcontainers-java")].state.terminated.exitCode}')
+         if [[ $CONTAINER_EXIT_CODE -eq 0 ]]; then
+         echo "Container exited successfully"
+           else
+           echo "Container did not exit successfully"
+         exit 1
+         fi
+
+      - name: Extract build status and compare
+        run: |
+          if [[ "${{ env.BUILD_OUTPUT }}" == *"BUILD SUCCESSFUL"* ]]; then
+            echo "The build is successful"
+          else
+           echo "The build is failed"
+           exit 1
+          fi
+
+      - name: Check if `report` folder has report after running tests
+        run: |
+          if [ -d "${{ github.workspace }}/kubernetes/08-testcontainers-java-in-k3d/report/reports/tests/test" ]; then
+            cat ${{ github.workspace }}/kubernetes/08-testcontainers-java-in-k3d/report/reports/tests/test/index.html
+          else
+            echo "Report folder is empty after running tests"
+            exit 1
+          fi
+
+      - name: Check report file `index.html` rights
+        run: |
+           folder_path="${{ github.workspace }}/kubernetes/08-testcontainers-java-in-k3d/report"
+           user=$(stat -c '%U' $folder_path)
+           group=$(stat -c '%G' $folder_path)
+           if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
+           echo "User=$user, $(id -un)"
+           echo "Group=$group, $(id -gn)"
+           else
+           echo "Error: user and group are incorrect"
+           exit 1
+           fi
+
+
+

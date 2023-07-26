@@ -1,0 +1,102 @@
+name: D-11 Python Testcontainers with Report Accessible in Docker
+
+on:
+  push:
+    paths:
+      - ".github/workflows/D-11-testcontainers-python-with-report-accessible-from-host.yml"
+      - "docker/11-testcontainers-python-with-report-accessible-from-host/**"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set environment variables
+        run: |
+          echo "USER_ID=$(id -u)" >> $GITHUB_ENV
+          echo "GROUP_ID=$(id -g)" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Initialize and update submodule
+        run: |
+          git submodule update --init --recursive 
+          cp -r ./submodules/testcontainers-python ./docker/11-testcontainers-python-with-report-accessible-from-host/src
+      
+      - name: Create report folder and check if it was successfully created
+        run: |
+          mkdir ./docker/11-testcontainers-python-with-report-accessible-from-host/report
+          if [ -d "${{ github.workspace }}/docker/11-testcontainers-python-with-report-accessible-from-host/report" ]; then
+            echo "Report folder was created"
+            cd ./docker/11-testcontainers-python-with-report-accessible-from-host
+            ls
+          else
+            echo "Report folder wasn't created"
+            exit 1
+          fi 
+
+      - name: Create network
+        run: |
+          docker network create demo-network
+
+      - name: Run dind container
+        run: |
+          docker run --privileged -d -p 12345:2375 --name dind-container -e DOCKER_TLS_CERTDIR="" --network demo-network docker:23.0.1-dind
+          
+      - name: Check Docker-in-Docker container
+        # Checks the status of the Docker-in-Docker container and exits if not running
+        run: |
+          DIND_STATUS=$(docker inspect -f '{{.State.Status}}' dind-container)
+          echo "Dind status: ${DIND_STATUS}"
+          if [[ "${DIND_STATUS}" != "running" ]]; then
+          echo "Dind container is not running"
+          exit 1
+          fi
+
+      - name: Build Docker image
+        run: |
+          docker build -t 11-testcontainers-python:0.1 \
+          --build-arg USER_ID=${{ env.USER_ID }} \
+          --build-arg GROUP_ID=${{ env.GROUP_ID }} \
+          ./docker/11-testcontainers-python-with-report-accessible-from-host/src
+
+      - name: Run tests in Docker container
+        run: |
+          docker run --name 11-task \
+          --mount type=bind,source=${{ github.workspace }}/docker/11-testcontainers-python-with-report-accessible-from-host/report,destination=/app/report \
+          --network demo-network 11-testcontainers-python:0.1 > 11-task-logs.txt
+          BUILD_OUTPUT=$(grep "passed" 11-task-logs.txt)
+          echo "BUILD_OUTPUT=${BUILD_OUTPUT}" >> $GITHUB_ENV
+      
+      - name: Extract build status from `11-task` and compare
+        # Extracts the build status from the `11-task` container logs and compares it to the expected
+        run: |
+          if [[ "${{ env.BUILD_OUTPUT }}" == *"passed"* ]]; then
+            echo "The build is successful"
+          else
+           echo "The build is failed"
+           exit 1
+          fi
+      
+      - name: Check if `report` folder has report after running tests
+        run: |
+          if test -f "${{ github.workspace }}/docker/11-testcontainers-python-with-report-accessible-from-host/report/report.html"; then
+            cat ${{ github.workspace }}/docker/11-testcontainers-python-with-report-accessible-from-host/report/report.html 
+          else 
+            echo "Report folder is empty after running tests"
+            exit 1
+          fi
+          
+      - name: Check report file `report.html` rights
+        run: |
+          folder_path="${{ github.workspace }}/docker/11-testcontainers-python-with-report-accessible-from-host/report"
+          user=$(stat -c '%U' $folder_path)
+          group=$(stat -c '%G' $folder_path)
+          if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
+          echo "User=$user, $(id -un)"
+          echo "Group=$group, $(id -gn)"
+          else
+          echo "Error: user and group are incorrect"
+          exit 1
+          fi
+         

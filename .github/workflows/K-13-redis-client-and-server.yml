@@ -1,0 +1,108 @@
+name: K-13 Redis client and server
+
+on:
+  push:
+    paths:
+      - ".github/workflows/K-13-redis-client-and-server.yml"
+      - "kubernetes/13-redis-client-and-server/**"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set environment variables
+        run: |
+          echo "USER_ID=$(id -u)" >> $GITHUB_ENV
+          echo "GROUP_ID=$(id -g)" >> $GITHUB_ENV
+          
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup k3d
+        uses: nolar/setup-k3d-k3s@v1
+      
+      - name: Setup redis
+        run: |
+          sudo apt update
+          sudo apt install redis
+          
+      - name: Verify Docker installation
+        run: docker version
+
+      - name: Verify Kubernetes installation
+        run: k3d --version
+
+      - name: Create report folder and check if it was successfully created
+        run: |
+          mkdir ./kubernetes/13-redis-client-and-server/data
+          if [ -d "${{ github.workspace }}/kubernetes/13-redis-client-and-server/data" ]; then
+            echo "Report folder was created"
+            ls ./kubernetes/13-redis-client-and-server
+          else
+            echo "Report folder wasn't created"
+            exit 1
+          fi
+          
+      - name: Create cluster with registry
+        run: |
+          k3d cluster create demo-cluster \
+          --registry-create demo-registry:12345 \
+          --volume ${{ github.workspace }}/kubernetes/13-redis-client-and-server/data:/data
+          
+      - name: Check cluster existence
+        run: |
+          CLUSTER_EXISTS=$(k3d cluster list | grep -c "demo-cluster")
+          if [ "$CLUSTER_EXISTS" -eq 1 ]; then
+             echo "Cluster exists"
+          else
+             echo "Cluster does not exist"
+             exit 1
+          fi
+          
+      - name: Build, tag and push Docker image
+        run: |
+          docker build -t 13-redis:0.1 \
+          --build-arg USER_ID=${{ env.USER_ID }} \
+          --build-arg GROUP_ID=${{ env.GROUP_ID }} \
+          ./kubernetes/13-redis-client-and-server/src
+          
+          docker tag 13-redis:0.1 localhost:12345/13-redis:0.1
+          
+          docker push localhost:12345/13-redis:0.1
+          
+      - name: Apply manifests
+        run: kubectl apply -f ./kubernetes/13-redis-client-and-server/manifests
+            
+      - name: Wait for the `dump.rdb` file to be created
+        run: ./check_exit_code_and_logs.sh  'cat ./kubernetes/13-redis-client-and-server/data/dump.rdb'
+
+      - name: Get the key
+        run: |
+          docker run -d --name redis-container redis:alpine3.18
+          docker stop redis-container
+          docker cp ${{ github.workspace }}/kubernetes/13-redis-client-and-server/data/dump.rdb redis-container:/data
+          docker start redis-container
+          KEY=$(docker exec -i redis-container redis-cli get mykey)
+          echo "KEY=${KEY}" >> $GITHUB_ENV
+          
+      - name: Check the key value
+        run: |
+          if [[ "${{ env.KEY }}" == "hello" ]]; then
+            echo "The key is correct"
+          else
+           echo "The key is incorrect"
+           exit 1
+          fi
+
+      - name: Check report folder rights
+        run: |
+           folder_path="${{ github.workspace }}/kubernetes/13-redis-client-and-server/data"
+           user=$(stat -c '%U' $folder_path)
+           group=$(stat -c '%G' $folder_path)
+           if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
+           echo "User=$user, $(id -un)"
+           echo "Group=$group, $(id -gn)"
+           else
+           echo "Error: user and group are incorrect"
+           exit 1
+           fi  

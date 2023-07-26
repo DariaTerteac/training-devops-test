@@ -1,0 +1,92 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: testcontainers-argo
+spec:
+  entrypoint: test
+  volumes:
+    - name: report
+      hostPath:
+        path: /report
+  templates:
+    - name: test
+      steps:
+        - - name: node-step
+            template: node
+          - name: gradle-step
+            template: gradle
+          - name: python-step
+            template: python
+    - name: node
+      container:
+        image: demo-registry:5000/12-testcontainers-node-argo:0.1
+        command: ["/bin/sh", "-c"]
+        args:
+          [
+            "dockerize -wait tcp://127.0.0.1:2375 -timeout 60s npm test postgresql-container.test.ts && cp -r /app/jest-test-report /app/report/node && sleep infinity",
+          ]
+        env:
+          - name: DOCKER_HOST
+            value: tcp://127.0.0.1:2375
+        volumeMounts:
+          - name: report
+            mountPath: /app/report
+      sidecars:
+        - name: dind-container
+          image: docker:23.0.1-dind-alpine3.17
+          command: ["dockerd-entrypoint.sh"]
+          securityContext:
+            privileged: true
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+    - name: gradle
+      container:
+        image: demo-registry:5000/12-testcontainers-java-argo:0.1
+        command: ["/bin/sh", "-c"]
+        args:
+          [
+            "dockerize -wait tcp://127.0.0.1:2375 -timeout 60s gradle test && cp -r /app/examples/redis-backed-cache-testng/build/reports/tests/test /app/report/gradle && sleep infinity",
+          ]
+        env:
+          - name: DOCKER_HOST
+            value: tcp://127.0.0.1:2375
+          - name: TESTCONTAINERS_RYUK_DISABLED
+            value: “true”
+          - name: TESTCONTAINERS_CHECKS_DISABLE
+            value: “true”
+        volumeMounts:
+          - name: report
+            mountPath: /app/report
+      sidecars:
+        - name: dind-container
+          image: docker:23.0.1-dind-alpine3.17
+          command: ["dockerd-entrypoint.sh"]
+          securityContext:
+            privileged: true
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+    - name: python
+      container:
+        image: demo-registry:5000/12-testcontainers-python-argo:0.1
+        command: ["/bin/sh", "-c"]
+        args:
+          [
+            "dockerize -wait tcp://127.0.0.1:2375 -timeout 60s pytest -s --html=/app/report/python/report.html && sleep infinity",
+          ]
+        env:
+          - name: DOCKER_HOST
+            value: tcp://127.0.0.1:2375
+        volumeMounts:
+          - name: report
+            mountPath: /app/report/
+      sidecars:
+        - name: dind-container
+          image: docker:23.0.1-dind-alpine3.17
+          command: ["dockerd-entrypoint.sh"]
+          securityContext:
+            privileged: true
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""

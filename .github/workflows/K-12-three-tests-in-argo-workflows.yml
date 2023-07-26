@@ -1,0 +1,187 @@
+name: K-12 Three tests in Argo Workflows
+
+on:
+  push:
+    paths:
+      - ".github/workflows/K-12-three-tests-in-argo-workflows.yml"
+      - "kubernetes/12-three-tests-in-argo-workflows/**"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set environment variables
+        run: |
+          echo "USER_ID=$(id -u)" >> $GITHUB_ENV
+          echo "GROUP_ID=$(id -g)" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup k3d
+        uses: nolar/setup-k3d-k3s@v1
+        
+      - name: Install w3m on Ubuntu
+        run: sudo apt-get update && sudo apt-get install -y w3m
+
+      - name: Verify Docker installation
+        run: docker version
+
+      - name: Verify Kubernetes installation
+        run: k3d --version
+
+      - name: Initialize and update submodule
+        run: |
+          git submodule update --init --recursive
+          cp -r ./submodules/testcontainers-java ./kubernetes/12-three-tests-in-argo-workflows/src
+          cp -r ./submodules/testcontainers-python ./kubernetes/12-three-tests-in-argo-workflows/src
+          cp -r ./submodules/testcontainers-node ./kubernetes/12-three-tests-in-argo-workflows/src
+
+      - name: Create report folder and check if it was successfully created
+        run: |
+          mkdir ./kubernetes/12-three-tests-in-argo-workflows/report
+          if [ -d "${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report" ]; then
+            echo "Report folder was created"
+            ls ./kubernetes/12-three-tests-in-argo-workflows/report
+          else
+            echo "Report folder wasn't created"
+            exit 1
+          fi
+
+      - name: Create cluster with registry
+        run: |
+          k3d cluster create demo-cluster \
+          --registry-create demo-registry:12345 \
+          --volume ${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report:/report
+      - name: Create namespace and install argo
+        run: |
+          kubectl create namespace argo
+          kubectl config set-context --current --namespace 'argo'
+          kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.4.6/install.yaml
+
+      - name: Check cluster existence
+        run: |
+          CLUSTER_EXISTS=$(k3d cluster list | grep -c "demo-cluster")
+          if [ "$CLUSTER_EXISTS" -eq 1 ]; then
+             echo "Cluster exists"
+          else
+             echo "Cluster does not exist"
+             exit 1
+          fi
+
+      - name: Build, tag and push `12-testcontainers-java-argo:0.1` image
+        run: |
+          docker build -t 12-testcontainers-java-argo:0.1 \
+          --build-arg USER_ID=$(id -u) \
+          --build-arg GROUP_ID=$(id -g) \
+          -f ./kubernetes/12-three-tests-in-argo-workflows/src/Dockerfile-java \
+          ./kubernetes/12-three-tests-in-argo-workflows/src/
+          docker tag 12-testcontainers-java-argo:0.1 localhost:12345/12-testcontainers-java-argo:0.1
+          docker push localhost:12345/12-testcontainers-java-argo:0.1
+      
+      - name: Build, tag and push `12-testcontainers-python-argo:0.1` image
+        run: |
+          docker build -t 12-testcontainers-python-argo:0.1 \
+          --build-arg USER_ID=$(id -u) \
+          --build-arg GROUP_ID=$(id -g) \
+          -f ./kubernetes/12-three-tests-in-argo-workflows/src/Dockerfile-python \
+          ./kubernetes/12-three-tests-in-argo-workflows/src
+          docker tag 12-testcontainers-python-argo:0.1 localhost:12345/12-testcontainers-python-argo:0.1
+          docker push localhost:12345/12-testcontainers-python-argo:0.1
+      
+      - name: Build, tag and push `12-testcontainers-node-argo:0.1` image
+        run: |
+          docker build -t 12-testcontainers-node-argo:0.1 \
+          --build-arg USER_ID=$(id -u) \
+          --build-arg GROUP_ID=$(id -g) \
+          -f ./kubernetes/12-three-tests-in-argo-workflows/src/Dockerfile-node \
+          ./kubernetes/12-three-tests-in-argo-workflows/src/
+          docker tag 12-testcontainers-node-argo:0.1 localhost:12345/12-testcontainers-node-argo:0.1
+          docker push localhost:12345/12-testcontainers-node-argo:0.1
+      
+      - name: Apply manifest
+        run: |
+          kubectl apply -f ./kubernetes/12-three-tests-in-argo-workflows/manifests
+          sleep 20
+           
+      - name: Wait for python report to appear
+        run: |
+          python_directory_to_check="${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/python"
+           while true; do
+           if [ -d "$python_directory_to_check" ]; then
+            echo "Directory $python_directory_to_check is present."
+            break
+           else
+            echo "Directory $python_directory_to_check not found. "
+            sleep 30  
+           fi
+           done
+           
+      - name: Wait for node report to appear
+        run: |
+          node_directory_to_check="${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/node"
+           while true; do
+           if [ -d "$node_directory_to_check" ]; then
+            echo "Directory $node_directory_to_check is present."
+            break
+           else
+            echo "Directory $node_directory_to_check not found. "
+            sleep 30 
+           fi
+           done
+           
+      - name: Wait for java report to appear
+        run: |
+          java_directory_to_check="${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/gradle"
+           while true; do
+           if [ -d "$java_directory_to_check" ]; then
+            echo "Directory $java_directory_to_check is present."
+            break
+           else
+            echo "Directory $java_directory_to_check not found. "
+            sleep 30 
+           fi
+           done  
+           
+      - name: Check if testcontainers-node build was successful
+        run: |
+           if grep -q "4 passed" ${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/node/index.html; then
+           w3m "${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/node/index.html"
+            echo "The testcontainers-node build was successful"
+           else
+             echo "The testcontainers-node build was failed"
+             exit 1
+           fi
+           
+      - name: Check if testcontainers-python build was successful
+        run: |
+           if grep -q "2 passed" ${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/python/report.html; then
+            w3m "${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/python/report.html"
+            echo "The testcontainers-python build was successful"
+           else
+             echo "The testcontainers-python build was failed"
+             exit 1
+           fi
+           
+      - name: Check if testcontainers-java build was successful
+        run: |
+             if grep -o "Success" ${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/gradle/index.html; then
+             w3m "${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/gradle/index.html"
+             echo "The testcontainers-java build was successful"
+             else
+             echo "The testcontainers-java build was failed"
+             exit 1
+             fi   
+
+      - name: Check report folder rights
+        run: |
+           folder_path="${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report"
+           user=$(stat -c '%U' $folder_path)
+           group=$(stat -c '%G' $folder_path)
+           if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
+           echo "User=$user, $(id -un)"
+           echo "Group=$group, $(id -gn)"
+           else
+           echo "Error: user and group are incorrect"
+           exit 1
+           fi     
