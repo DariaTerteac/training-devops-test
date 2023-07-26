@@ -86,10 +86,22 @@ jobs:
         else
         echo "Deployment is present in the namespace."
         fi
-      
-   - name: Check springboot web site for status code
+   
+   - name: Check Api web page
      run: |
-       ./check_exit_code_and_logs.sh  'curl http://localhost:${{ env.SPRINGBOOT_API_PORT }}/app'
+       ./check_exit_code_and_logs.sh  'curl http://localhost:18080/app'
+      
+   - name: Check pgadmin site
+     run: |
+          if ! curl -s http://localhost:18080/app >/dev/null; then
+          exit_code=$?
+          if [ $exit_code -eq 0 ]; then
+          echo “pgAdmin does not exist.”
+          else
+          echo “Unexpected error occurred with curl. Exit code: $exit_code”
+          exit 1
+          fi
+          fi
       
    - name: Check PSQL connection
      run: |
