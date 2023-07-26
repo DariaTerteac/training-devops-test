@@ -81,5 +81,8 @@ jobs:
    - name: Check PSQL connection
      run: |
        ./check_exit_code_and_logs.sh  'psql postgresql://md_dterteac:123@localhost:${{ env.PSQL_PORT }}/demodb'
-       
+   
+   - name: Setup tmate session
+     if: ${{ failure() }}
+     uses: mxschmitt/action-tmate@v3.11
 
