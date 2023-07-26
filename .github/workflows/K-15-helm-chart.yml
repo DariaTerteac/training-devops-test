@@ -1,0 +1,66 @@
+name: K-15 Helm Chart using springboot application, postgresql and pgadmin
+
+on:
+ push:
+  paths:
+   - '.github/workflows/K-15-helm-chart.yml'
+   - './kubernetes/15-helm-chart/**'
+
+jobs:
+ build:
+  runs-on: ubuntu-latest
+  steps:
+   - name: Checkout repository
+     uses: actions/checkout@v3
+
+   - name: Setup k3d
+     uses: nolar/setup-k3d-k3s@v1
+
+   - name: Verify Docker installation
+     run: docker version
+   - name: Verify Kubernetes installation
+     run: k3d --version
+
+   - name: Initialize and update submodule
+     run: |
+      git submodule update --init --recursive submodules/springboot-api-rest-example
+      cp -r ./submodules/springboot-api-rest-example ./kubernetes/15-helm-chart
+      if [ -d “./kubernetes/15-helm-chart/springboot-api-rest-example” ]; then
+      echo “Submodule directory was copied successfully"
+      else
+      echo “Submodule directory wasn't copied”
+      exit 1
+      fi
+
+   - name: Create cluster with registry
+     run: k3d cluster create demo-cluster --registry-create demo-registry:12345
+
+   - name: Build, tag and push springboot
+     run: |
+      cd “${{ github.workspace }}/kubernetes/15-helm-chart/springboot-api-rest-example/api”
+      DOCKER_BUILDKIT=1 docker build -f ./docker/Dockerfile.prod -t 15-springboot-api:0.1 .
+
+      docker tag 15-springboot-api:0.1 localhost:12345/15-springboot-api:0.1
+
+      docker push localhost:12345/15-springboot-api:0.1
+
+   - name: Install helm chart
+     run: |
+       helm upgrade --install --cleanup-on-fail demo-chart \
+        ./kubernetes/15-helm-chart/demo-chart --namespace demo-chart --create-namespace \
+        --set service.type=LoadBalancer --wait
+
+   - name: Forward the host ports by spring-boot and pgadmin to the ports, which are listening by the services
+     run: |
+      k3d cluster edit demo-cluster --port-add 18081:8081@loadbalancer
+      k3d cluster edit demo-cluster --port-add 18080:8080@loadbalancer
+
+   - name: Check HTTP status of pgadmin and springboot sites
+     uses: lakuapik/gh-actions-http-status@v1
+     with:
+      sites: '[“http://localhost:18081/app”, “http://localhost:18080/login”'
+      expected: '[200, 200]'
+
+   - name: Setup tmate session
+     if: ${{ failure() }}
+     uses: mxschmitt/action-tmate@v3.11

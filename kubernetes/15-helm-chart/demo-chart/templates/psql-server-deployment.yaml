@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server-postgres
+spec:
+  selector:
+    matchLabels:
+      app: server-postgres
+  template:
+    metadata:
+      labels:
+        app: server-postgres
+    spec:
+      containers:
+        - name: server-postgres
+          image: postgres:14.5-alpine3.16
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: db-volume
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: psql-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: psql-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: psql-secret
+                  key: POSTGRES_DB
+            - name: PGDATA
+              valueFrom:
+                configMapKeyRef:
+                  name: psql-config
+                  key: PGDATA
+          ports:
+            - containerPort: 5432
+      volumes:
+      - name: db-volume
+        hostPath:
+          path: /databasevolume
+
