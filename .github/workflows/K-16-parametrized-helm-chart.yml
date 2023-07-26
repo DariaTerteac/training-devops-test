@@ -60,7 +60,7 @@ jobs:
          context: ${{ env.SRC_FOLDER }}
          file: ${{ env.SRC_FOLDER }}/docker/Dockerfile.prod
          push: true
-         tags: localhost:12345/15-springboot-api:0.1
+         tags: localhost:12345/16-springboot-api:0.1
          build-args: |
            USER_ID=$(id -u)
            GROUP_ID=$(id -g)
