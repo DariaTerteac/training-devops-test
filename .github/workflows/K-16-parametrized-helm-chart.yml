@@ -77,7 +77,8 @@ jobs:
      run: |
        ./check_exit_code_and_logs.sh 'kubectl wait deployment/api -n demo-chart --for=condition=available'
        ./check_exit_code_and_logs.sh 'kubectl wait deployment/server-postgres -n demo-chart --for=condition=available'
-   - name: Check if deployments are available
+       
+   - name: Check if pgAdmin is not present
      run: | 
         available_deployments=$(kubectl get deployments -n demo-chart -o name)
         if ! echo "$available_deployments" | grep -q "deployment/pgadmin"; then
@@ -86,13 +87,9 @@ jobs:
         echo "Deployment is present in the namespace."
         fi
       
-   - name: Check springboot site for status code
-     uses: cygnetdigital/wait_for_response@v2.0.0
-     with:
-      url: 'http://localhost:18080/app'
-      responseCode: '200'
-      timeout: 200
-      interval: 5
+   - name: Check springboot web site for status code
+     run: |
+       ./check_exit_code_and_logs.sh  'curl http://localhost:${{ env.SPRINGBOOT_API_PORT }}/app'
       
    - name: Check PSQL connection
      run: |
