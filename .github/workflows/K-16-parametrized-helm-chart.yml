@@ -101,7 +101,7 @@ jobs:
           echo "Springboot api does not exist. Exit code: $exit_code"
           exit 1
           fi
-          fi
+          
       
    - name: Check PSQL connection
      run: |
