@@ -1,0 +1,83 @@
+replicaCount: 1
+
+springBootApp:
+  image: demo-registry:5000/16-springboot-api:0.1
+  env:
+    - name: POSTGRES_USER
+      valueFrom:
+        secretKeyRef:
+          name: psql-secret
+          key: POSTGRES_USER
+    - name: POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: psql-secret
+          key: POSTGRES_PASSWORD
+    - name: POSTGRES_DB
+      valueFrom:
+        secretKeyRef:
+          name: psql-secret
+          key: POSTGRES_DB
+    - name: PGDATA
+      valueFrom:
+        configMapKeyRef:
+          name: psql-config
+          key: PGDATA
+    - name: DB_URL
+      value: $(DB_HOST):$(DB_PORT)/$(DB_NAME)
+
+postgresql:
+  server:
+    image: postgres:14.5-alpine3.16
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    env:
+      - name: POSTGRES_USER
+        valueFrom:
+          secretKeyRef:
+            name: psql-secret
+            key: POSTGRES_USER
+      - name: POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: psql-secret
+            key: POSTGRES_PASSWORD
+      - name: POSTGRES_DB
+        valueFrom:
+          secretKeyRef:
+            name: psql-secret
+            key: POSTGRES_DB
+      - name: PGDATA
+        valueFrom:
+          configMapKeyRef:
+            name: psql-config
+            key: PGDATA
+
+pgadmin:
+  enabled: true
+  server:
+    image: dpage/pgadmin4:7.1
+    env:
+      - name: PGADMIN_DEFAULT_EMAIL
+        value: pgadmin@pgadmin.com
+      - name: PGADMIN_DEFAULT_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: psql-secret
+            key: pgadmin-password
+
+configmap:
+  enabled: true
+  name: psql-config
+
+secret:
+  name: psql-secret
+
+service:
+  name: database-service
+  type: ClusterIP
+  port: 5432 
+# Other settings for your Helm chart
+
