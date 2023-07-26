@@ -70,7 +70,7 @@ jobs:
       
    - name: PSQL
      run: |
-       psql postgresql://md_dterteac:123@database-service:6432/demodb
+       postgres://md_dterteac:123@database-service:6432/demodb
        
    - name: Setup tmate session
      if: ${{ failure() }}
