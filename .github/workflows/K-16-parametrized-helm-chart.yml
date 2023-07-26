@@ -71,6 +71,10 @@ jobs:
         ./kubernetes/16-parametrized-helm-chart/demo-chart --namespace demo-chart --create-namespace \
         --set service.type=LoadBalancer --wait \
         --set pgadmin.enabled=false
+   - name: Check if deployments are available
+     run: |
+       ./wait_status_code_and_logs.sh 'kubectl wait deployment -n demo-chart --for=condition=available --selector=app=api'
+       ./wait_status_code_and_logs.sh 'kubectl wait deployment -n demo-chart --for=condition=available --selector=app=server-postgres'
 
    - name: Check HTTP status of pgadmin and springboot sites
      uses: lakuapik/gh-actions-http-status@v1
