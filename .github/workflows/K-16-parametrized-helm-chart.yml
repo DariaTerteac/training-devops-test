@@ -82,3 +82,4 @@ jobs:
      run: |
        ./check_exit_code_and_logs.sh  'psql postgresql://md_dterteac:123@localhost:${{ env.PSQL_PORT }}/demodb'
        
+
