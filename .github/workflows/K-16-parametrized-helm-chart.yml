@@ -73,8 +73,8 @@ jobs:
         --set pgadmin.enabled=false
    - name: Check if deployments are available
      run: |
-       ./check_exit_code_and_logs.sh 'kubectl wait deployment -n demo-chart --for=condition=available --selector=app=api'
-       ./check_exit_code_and_logs.sh 'kubectl wait deployment -n demo-chart --for=condition=available --selector=app=server-postgres'
+       ./check_exit_code_and_logs.sh 'kubectl wait deployment/api -n demo-chart --for=condition=available'
+       ./check_exit_code_and_logs.sh 'kubectl wait deployment/server-postgres -n demo-chart --for=condition=available'
 
    - name: Check HTTP status of pgadmin and springboot sites
      uses: lakuapik/gh-actions-http-status@v1
