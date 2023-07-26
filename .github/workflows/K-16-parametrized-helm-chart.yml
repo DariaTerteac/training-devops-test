@@ -37,8 +37,8 @@ jobs:
 
    - name: Initialize and update submodule
      run: |
-      git submodule update --init --recursive ./springboot-api
-      cp -r ./springboot-api ./kubernetes/16-parametrized-helm-chart
+      git submodule update --init --recursive submodules/springboot-api
+      cp -r ./submodules/springboot-api ./kubernetes/16-parametrized-helm-chart
       if [ -d './kubernetes/16-parametrized-helm-chart/springboot-api' ]; then
       echo "Submodule directory was copied successfully"
       else
@@ -53,13 +53,13 @@ jobs:
         -p ${{ env.PGADMIN_PORT }}:8081@loadbalancer \
         -p ${{ env.SPRINGBOOT_API_PORT }}:8080@loadbalancer \
         -p ${{ env.PSQL_PORT }}:6432@loadbalancer
-      
+
    - name: Build, tag and push the image
      uses: docker/build-push-action@v4
      with:
          context: ${{ env.SRC_FOLDER }}
          file: ${{ env.SRC_FOLDER }}/docker/Dockerfile.prod
-         push: true 
+         push: true
          tags: localhost:12345/15-springboot-api:0.1
          build-args: |
            USER_ID=$(id -u)
@@ -77,7 +77,7 @@ jobs:
      with:
       sites: '["http://localhost:${{ env.PGADMIN_PORT }}/app", "http://localhost:${{ env.SPRINGBOOT_API_PORT }}/login"'
       expected: '[200, 200]'
-      
+
    - name: Check PSQL connection
      run: |
        ./check_exit_code_and_logs.sh  'psql postgresql://md_dterteac:123@localhost:${{ env.PSQL_PORT }}/demodb'
