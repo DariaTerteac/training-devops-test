@@ -24,8 +24,8 @@ jobs:
    - name: Initialize and update submodule
      run: |
       git submodule update --init --recursive submodules/springboot-api-rest-example
-      cp -r ./submodules/springboot-api-rest-example ./kubernetes/15-helm-chart
-      if [ -d “./kubernetes/15-helm-chart/springboot-api-rest-example” ]; then
+      cp -r ./submodules/springboot-api ./kubernetes/15-helm-chart
+      if [ -d “./kubernetes/15-helm-chart/springboot-api” ]; then
       echo “Submodule directory was copied successfully"
       else
       echo “Submodule directory wasn't copied”
