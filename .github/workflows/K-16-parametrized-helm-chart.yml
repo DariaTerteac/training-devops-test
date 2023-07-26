@@ -78,14 +78,22 @@ jobs:
        ./check_exit_code_and_logs.sh 'kubectl wait deployment/api -n demo-chart --for=condition=available'
        ./check_exit_code_and_logs.sh 'kubectl wait deployment/server-postgres -n demo-chart --for=condition=available'
       
-   - name: Check if PGAdmin is abcent in the list of deployments
-     run: |
-      available_deployments=$(kubectl get deployments -n demo-chart -o jsonpath='{.items[*].metadata.name}')
-      if [[ ! $available_deployments =~ (^|[[:space:]])"pgadmin"($|[[:space:]]) ]]; then
-       echo "Deployment `pgadmin` is not present in the `demo-chart`  namespace."
-      else
-       echo "Deployment `pgadmin' is present in the `demo-chart` namespace."
-      fi
+#    - name: Check if PGAdmin is abcent in the list of deployments
+#      run: |
+#       available_deployments=$(kubectl get deployments -n demo-chart -o jsonpath='{.items[*].metadata.name}')
+#       if [[ ! $available_deployments =~ (^|[[:space:]])"pgadmin"($|[[:space:]]) ]]; then
+#        echo "Deployment `pgadmin` is not present in the `demo-chart`  namespace."
+#       else
+#        echo "Deployment `pgadmin' is present in the `demo-chart` namespace."
+#       fi
+      
+      
+   - name: Check if springboot api web page is available
+     uses: jtalk/url-health-check-action@v3
+     with:
+      url: http://localhost:18080/app
+      max-attempts: 3 
+      retry-delay: 5s
       
    - name: Check PSQL connection
      run: |
