@@ -4,10 +4,10 @@ on:
   push:
     paths:
       - ".github/workflows/D-10-testcontainers-java-with-report-accessible-from-host.yml"
-      - "${{ env.TASK_PATH }}/**"
+      - "docker/10-testcontainers-java-with-report-accessible-from-host/**"
 
 env:
-  TASK_PATH: "./${{ env.TASK_PATH }}"
+  TASK_PATH: "./docker/10-testcontainers-java-with-report-accessible-from-host"
 
 jobs:
   build:
@@ -25,14 +25,14 @@ jobs:
       - name: Initialize and update submodule
         run: |
           git submodule update --init --recursive 
-          cp -r ./submodules/testcontainers-java ./${{ env.TASK_PATH }}/src
+          cp -r ./submodules/testcontainers-java ${{ env.TASK_PATH }}/src
       
       - name: Create report folder and check if it was successfully created
         run: |
-          mkdir ./${{ env.TASK_PATH }}/report
+          mkdir ${{ env.TASK_PATH }}/report
           if [ -d "${{ github.workspace }}/${{ env.TASK_PATH }}/report" ]; then
             echo "Report folder was created"
-            cd ./${{ env.TASK_PATH }}
+            cd ${{ env.TASK_PATH }}
             ls
           else
             echo "Report folder wasn't created"
@@ -60,7 +60,7 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t 10-testcontainers-java:0.1 --build-arg USER_ID=${{ env.USER_ID }} --build-arg GROUP_ID=${{ env.GROUP_ID }} \
-          ./${{ env.TASK_PATH }}/src
+          ${{ env.TASK_PATH }}/src
 
       - name: Run tests in Docker container
         run: |
