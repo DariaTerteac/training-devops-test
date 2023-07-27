@@ -47,7 +47,7 @@ jobs:
       
       - name: Check connection with nginx 
         run: |
-          curl localhost:8081
+          ./check_exit_code_and_logs.sh 'curl localhost:8081'
           HTTP_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" localhost:8081)
           if [[ "$HTTP_RESPONSE" -eq 200 ]]; then
           echo "Successfully connected to nginx. Status $HTTP_RESPONSE "
