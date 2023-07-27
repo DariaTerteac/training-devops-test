@@ -7,6 +7,7 @@ on:
 
 env:
   EXPECTED: "Hello world"
+  TASK_PATH: "${{ github.workspace }}/kubernetes/02-hello-world-python-in-k3d"
 
 jobs:
   build:
@@ -40,28 +41,23 @@ jobs:
           fi
 
       - name: Build, tag and push the image
-        run: |
-          docker build -t 02-hello-world-python-in-k3d:0.1 ./kubernetes/02-hello-world-python-in-k3d/src
-          docker tag 02-hello-world-python-in-k3d:0.1 localhost:12345/02-hello-world-python-in-k3d:0.1
-          docker push localhost:12345/02-hello-world-python-in-k3d:0.1
+        uses: docker/build-push-action@v4
+        with:
+         context: ${{ env.TASK_PATH }}/src
+         file: ${{ env.TASK_PATH }}/src/Dockerfile
+         push: true 
+         tags: localhost:12345/02-hello-world-python-in-k3d:0.1
 
       - name: Check image existence
         run: |
-          IMAGE_EXISTS=$(docker images -q 02-hello-world-python-in-k3d:0.1)
           TAGGED_IMAGE_EXISTS=$(docker images -q localhost:12345/02-hello-world-python-in-k3d:0.1)
-          if [ -n "$IMAGE_EXISTS" ]; then
-           echo "Image 02-hello-world-python-in-k3d:0.1 exists"
-          else
-           echo "Image 02-hello-world-python-in-k3d:0.1 does not exist"
-           exit 1
-          fi
           if [ -n "$TAGGED_IMAGE_EXISTS" ]; then
            echo "Image localhost:12345/02-hello-world-python-in-k3d:0.1 exists"
           else
            echo "Image localhost:12345/02-hello-world-python-in-k3d:0.1 does not exist"
            exit 1
           fi
-
+          
       - name: Apply manifest
         run: |
           kubectl apply -f ./kubernetes/02-hello-world-python-in-k3d/manifests
