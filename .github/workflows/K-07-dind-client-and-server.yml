@@ -36,11 +36,8 @@ jobs:
              exit 1
            fi
 
-      - name: Apply the service
-        run: kubectl apply -f ./kubernetes/07-dind-client-and-server/manifests/dind-service.yaml
-
-      - name: Apply the deployment
-        run: kubectl apply -f ./kubernetes/07-dind-client-and-server/manifests/dind-client-and-server.yaml
+      - name: Apply manifests
+        run: kubectl apply -f ./kubernetes/07-dind-client-and-server/manifests
 
       - name: Wait for pods to be ready
         run: kubectl wait deployment -n default dind-server-and-client --for=condition=Available --timeout=1m
