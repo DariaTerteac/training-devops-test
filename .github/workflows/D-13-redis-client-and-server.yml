@@ -61,7 +61,7 @@ jobs:
         run: echo -e "SET key \"hello\"\nSAVE" | docker exec -i redis-client redis-cli -h redis-server
 
       - name: Wait for the `dump.rdb` file to be created
-        run: ./check_exit_code_and_logs.sh  'cat ${{ env.TASK_PATH }}/data/dump.rdb'
+        run: ./check_exit_code_and_logs.sh  'cat ./docker/13-redis-client-and-server/data/dump.rdb'
 
       - name: Get the key
         run: |
