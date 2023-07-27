@@ -40,7 +40,7 @@ jobs:
         run: kubectl apply -f ./kubernetes/07-dind-client-and-server/manifests
 
       - name: Wait for pods to be ready
-        run: kubectl wait deployment -n default dind-server-and-client --for=condition=Available --timeout=1m
+        run: ./check_exit_code_and_logs.sh 'kubectl wait deployment/server-postgres -n default --for=condition=available'
 
       - name: Add port to cluster
         run: k3d cluster edit demo-cluster --port-add 8081:8080@loadbalancer
