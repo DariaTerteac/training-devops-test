@@ -8,7 +8,7 @@ on:
 
 env:
   EXPECTED_KEY: "hello"
-  TASK_PATH: "${{ github.workspace }}/docker/13-redis-client-and-server"
+  DATA_FOLDER: "${{ github.workspace }}/docker/13-redis-client-and-server/data"
 
 jobs:
   build:
@@ -31,10 +31,10 @@ jobs:
 
       - name: Create data folder and check if it was successfully created
         run: |
-          mkdir ${{ github.workspace }}/docker/13-redis-client-and-server/data
-          if [ -d "${{ github.workspace }}/docker/13-redis-client-and-server/data" ]; then
+          mkdir ${DATA_FOLDER}
+          if [ -d ${DATA_FOLDER} ]; then
             echo "Data folder was created"
-            ls ${{ env.TASK_PATH }}
+            ls ./docker/13-redis-client-and-server
           else
             echo "Data folder is not created"
             exit 1
@@ -45,13 +45,13 @@ jobs:
           docker build -t 13-redis:0.1 \
           --build-arg USER_ID=${{ env.USER_ID }} \
           --build-arg GROUP_ID=${{ env.GROUP_ID }} \
-          ${{ env.TASK_PATH }}/src
+          ./docker/13-redis-client-and-server/src
 
       - name: Run server container
         run: |
           docker run -d --network redis-network \
           --name redis-server \
-          --mount type=bind,source=${{ env.TASK_PATH }}/data,target=/data \
+          --mount type=bind,source=${DATA_FOLDER},target=/data \
           13-redis:0.1
 
       - name: Start Redis Client Container
@@ -61,7 +61,7 @@ jobs:
         run: echo -e "SET key \"hello\"\nSAVE" | docker exec -i redis-client redis-cli -h redis-server
 
       - name: Wait for the `dump.rdb` file to be created
-        run: ./check_exit_code_and_logs.sh  'cat ./docker/13-redis-client-and-server/data/dump.rdb'
+        run: ./check_exit_code_and_logs.sh  'cat ${DATA_FOLDER}/dump.rdb'
 
       - name: Get the key
         run: |
@@ -80,12 +80,11 @@ jobs:
            echo "The key is incorrect"
            exit 1
           fi
-
+          
       - name: Check report folder rights
         run: |
-          folder_path="${{ env.TASK_PATH }}/data"
-          user=$(stat -c '%U' $folder_path)
-          group=$(stat -c '%G' $folder_path)
+          user=$(stat -c '%U' ${DATA_FOLDER})
+          group=$(stat -c '%G' ${DATA_FOLDER})
           if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
           echo "User=$user, $(id -un)"
           echo "Group=$group, $(id -gn)"
