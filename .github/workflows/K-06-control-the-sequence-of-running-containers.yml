@@ -6,6 +6,7 @@ on:
       - 'kubernetes/06-control-the-sequence-of-running-containers/**'
 env:
   EXPECTED: "content of test file"
+  TASK_PATH: "${{ github.workspace }}/kubernetes/06-control-the-sequence-of-running-containers"
 
 jobs:
   build:
@@ -28,13 +29,12 @@ jobs:
         run: k3d cluster create demo-cluster --registry-create demo-registry:12345
 
       - name: Build, tag and push the image for dockerize
-        run: |
-          docker build -t 06-writer-reader-with-dockerize:0.1 \
-            ./kubernetes/06-control-the-sequence-of-running-containers/src
-            
-            docker tag 06-writer-reader-with-dockerize:0.1 localhost:12345/06-writer-reader-with-dockerize:0.1
-            
-            docker push localhost:12345/06-writer-reader-with-dockerize:0.1
+        uses: docker/build-push-action@v4
+        with:
+           context: ${{ env.TASK_PATH }}/src
+           file: ${{ env.TASK_PATH }}/src/Dockerfile
+           push: true
+           tags: localhost:12345/06-writer-reader-with-dockerize:0.1
             
       - name: Apply all needed manifests
         run: |
