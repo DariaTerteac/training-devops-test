@@ -1,0 +1,80 @@
+name: K-04 Deployment with 4 Pods
+
+on:
+  push:
+    paths:
+      - 'kubernetes/04-deployment-with-4-pods/**'
+      - '.github/workflows/K-04-deployment-with-4-pods.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup k3d
+        uses: nolar/setup-k3d-k3s@v1
+
+      - name: Verify Docker installation
+        run: docker version
+
+      - name: Verify Kubernetes installation
+        run: k3d --version
+
+      - name: Create cluster with registry
+        run: k3d cluster create demo-cluster --registry-create demo-registry:12345
+
+      - name: Check cluster existence
+        run: |
+          CLUSTER_EXISTS=$(k3d cluster list | grep -c "demo-cluster")
+          if [ "$CLUSTER_EXISTS" -eq 1 ]; then
+             echo "Cluster exists"
+          else
+             echo "Cluster does not exist"
+             exit 1
+           fi
+           
+      - name: Apply the service
+        run: kubectl apply -f ./kubernetes/04-deployment-with-4-pods/manifests/service-4-pods.yaml 
+
+      - name: Apply the deployment
+        run: kubectl apply -f ./kubernetes/04-deployment-with-4-pods/manifests/deployment-with-4-pods.yaml
+
+      - name: Wait for pods to be ready
+        run: kubectl get deployment -n default deployment-with-4-pods -o jsonpath="{range .status.conditions[?(.type == 'Ready')]}{.type} is {.status}{'\n'}{end}"
+      
+      - name: Add port to cluster
+        run: k3d cluster edit demo-cluster --port-add 4568:4567@loadbalancer
+
+      - name: Test load balancing
+        run: |
+          server_addresses=()
+          for i in {1..20}; do
+          address_value=$(curl -s http://localhost:4568 | grep -E -o "([0-9]{1,3}\.){1,3}[[:digit:]]{1,3}")
+          if [[ -n "$address_value" ]]; then
+          # Check if the value is not already present in the array
+           if ! [[ " ${server_addresses[@]} " =~ " $address_value " ]]; then
+          server_addresses+=("$address_value")
+          fi
+          fi
+          sleep 1
+          done
+                            
+          echo "Unique address values:"
+          for val in "${server_addresses[@]}"; do
+          echo "$val"
+          done
+          
+          count=${#server_addresses[@]}
+          echo "Number of unique address values: $count"
+          echo "count=${count}" >> $GITHUB_ENV
+          
+      - name: Count address values
+        run: |
+          if [[ "${{ env.count }}" != "4" ]]; then
+            echo "Error: Load balancing is not shared between 4 pods"
+            exit 1
+          fi
+

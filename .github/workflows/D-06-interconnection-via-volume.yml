@@ -1,0 +1,72 @@
+name: D-06 Run Containers with Shared Volume
+
+on:
+  push:
+    paths:
+      - "docker/06-interconnection-via-volume/**"
+      - ".github/workflows/D-06-interconnection-via-volume.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        
+      - name: Verify Docker installation
+        run: docker version  
+
+      - name: Build Writer Container
+        run: |
+          docker build -t 06-writer-container:0.1 \
+          -f ./docker/06-interconnection-via-volume/src/Dockerfile.writer \
+          ./docker/06-interconnection-via-volume/src
+
+      - name: Build Reader Container
+        run: |
+          docker build -t 06-reader-container:0.1 \
+          -f ./docker/06-interconnection-via-volume/src/Dockerfile.reader \
+          ./docker/06-interconnection-via-volume/src
+
+      - name: Create Shared Volume
+        run: docker volume create shared-volume
+
+      - name: Run Writer Container
+        run: docker run -v shared-volume:/data --name 06-writer 06-writer-container:0.1
+
+      - name: Run Reader Container
+        run: docker run -v shared-volume:/data --name 06-reader 06-reader-container:0.1
+      
+      - name: Check shared volume
+        run: |
+            VOLUME_INFO=$(docker volume inspect shared-volume)
+            if [[ -z "${VOLUME_INFO}" ]]; then
+              echo "Volume is empty or does not exist"
+              exit 1
+            else
+              echo "Volume content: ${VOLUME_INFO}"
+            fi
+          
+      - name: Check exit status
+        run: |
+          STATUS_WRITER=$(docker inspect 06-writer --format='{{.State.ExitCode}}')
+          STATUS_READER=$(docker inspect 06-reader --format='{{.State.ExitCode}}')
+          if [ "$STATUS_WRITER" -eq 0 ] && [ "$STATUS_READER" -eq 0 ]; then
+            echo "Both containers exited successfully"
+          else
+            echo "Container 06-writer failed with exit status $STATUS_WRITER"
+            echo "Container 06-reader failed with exit status $STATUS_READER"
+            exit 1
+          fi
+
+      - name: Check output
+        # Compare the output with the expected value and handle failure
+        run: |
+          FILE_CONTENT=$(docker logs 06-reader)
+          echo "File content: ${FILE_CONTENT}"
+          if [[ "${FILE_CONTENT}" != "content of test file" ]]; then
+          echo "Outputs don't match"
+          exit 1
+          fi
+          

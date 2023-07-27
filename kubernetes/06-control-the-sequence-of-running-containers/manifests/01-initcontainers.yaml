@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: 01-writer-reader
+  labels:
+    name: 01-writer-reader
+spec:
+  initContainers:
+    - name: writer-container
+      image: ubuntu
+      command:
+        ["/bin/sh", "-c", "echo 'content of test file' > /volume/test1.txt"]
+      volumeMounts:
+        - mountPath: /volume
+          name: demo-volume
+      resources:
+        limits:
+          memory: "128Mi"
+          cpu: "500m"
+  containers:
+   - name: reader-container
+     image: ubuntu
+     command: ["/bin/sh", "-c", "cat /volume/test1.txt"]
+     volumeMounts:
+      - mountPath: /volume
+        name: demo-volume
+     resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+  volumes:
+    - name: demo-volume
+      emptyDir: {}

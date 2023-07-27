@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world-python
+spec:
+  selector:
+    matchLabels:
+      app: hello-world-python
+  template:
+    metadata:
+      labels:
+        app: hello-world-python
+    spec:
+      containers:
+      - name: hello-world-python
+        image: demo-registry:5000/02-hello-world-python-in-k3d:0.1
+        command: ["python", "hello.py"]
+        args: ["--name", "world"]
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"

@@ -1,0 +1,94 @@
+name: D-13 Redis client and server
+
+on:
+  push:
+    paths:
+      - 'docker/13-redis-client-and-server/**'
+      - '.github/workflows/D-13-redis-client-and-server.yml'
+
+env:
+  EXPECTED_KEY: "hello"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set environment variables
+        run: |
+          echo "USER_ID=$(id -u)" >> $GITHUB_ENV
+          echo "GROUP_ID=$(id -g)" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Verify Docker installation
+        run: docker version
+
+      - name: Create network
+        run: docker network create redis-network
+
+      - name: Create data folder and check if it was successfully created
+        run: |
+          mkdir ./docker/13-redis-client-and-server/data
+          if [ -d "${{ github.workspace }}/docker/13-redis-client-and-server/data" ]; then
+            echo "Data folder was created"
+            ls ./docker/13-redis-client-and-server
+          else
+            echo "Data folder is not created"
+            exit 1
+          fi
+
+      - name: Build, tag and push the image
+        run: |
+          docker build -t 13-redis:0.1 \
+          --build-arg USER_ID=${{ env.USER_ID }} \
+          --build-arg GROUP_ID=${{ env.GROUP_ID }} \
+          ./docker/13-redis-client-and-server/src
+
+      - name: Run server container
+        run: |
+          docker run -d --network redis-network \
+          --name redis-server \
+          --mount type=bind,source=${{ github.workspace }}/docker/13-redis-client-and-server/data,target=/data \
+          13-redis:0.1
+
+      - name: Start Redis Client Container
+        run: docker run -d --name redis-client --network redis-network redis sleep 20
+
+      - name: Set key using Redis CLI
+        run: echo -e "SET key \"hello\"\nSAVE" | docker exec -i redis-client redis-cli -h redis-server
+
+      - name: Wait for the `dump.rdb` file to be created
+        run: ./check_exit_code_and_logs.sh  'cat ./docker/13-redis-client-and-server/data/dump.rdb'
+
+      - name: Get the key
+        run: |
+          docker run -d --name redis-container redis:alpine3.18
+          docker cp ./docker/13-redis-client-and-server/data/dump.rdb redis-container:/data
+          docker stop redis-container
+          docker start redis-container
+          KEY=$(docker exec -i redis-container redis-cli get key)
+          echo "KEY=${KEY}" >> $GITHUB_ENV
+
+      - name: Check the key value
+        run: |
+          if [[ "${{ env.KEY }}" == "${{ env.EXPECTED_KEY }}" ]]; then
+            echo "The key is correct"
+          else
+           echo "The key is incorrect"
+           exit 1
+          fi
+
+      - name: Check report folder rights
+        run: |
+          folder_path="${{ github.workspace }}/docker/13-redis-client-and-server/data"
+          user=$(stat -c '%U' $folder_path)
+          group=$(stat -c '%G' $folder_path)
+          if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
+          echo "User=$user, $(id -un)"
+          echo "Group=$group, $(id -gn)"
+          else
+          echo "Error: user and group are incorrect"
+          exit 1
+          fi

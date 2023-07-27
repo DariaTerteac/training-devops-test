@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world-java
+spec:
+  selector:
+    matchLabels:
+      app: hello-world-java
+  template:
+    metadata:
+      labels:
+        app: hello-world-java
+    spec:
+      containers:
+      - name: hello-world-java
+        image: demo-registry:5000/01-hello-world-java-in-k3d:0.1
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"

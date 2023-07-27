@@ -1,0 +1,83 @@
+name: K-02 HelloWorld Python in k3d
+on:
+  push:
+    paths:
+      - "kubernetes/02-hello-world-python-in-k3d/**"
+      - ".github/workflows/K-02-hello-world-python-in-k3d.yml"
+
+env:
+  EXPECTED: "Hello world"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup k3d
+        uses: nolar/setup-k3d-k3s@v1
+
+      - name: Verify Docker installation
+        run: docker version
+
+      - name: Verify Kubernetes installation
+        run: k3d --version
+
+      - name: Create cluster
+        run: |
+          k3d cluster create demo-cluster --registry-create demo-registry:12345
+
+      - name: Check cluster existence
+        run: |
+          CLUSTER_EXISTS=$(k3d cluster list | grep -c "demo-cluster")
+          if [ "$CLUSTER_EXISTS" -eq 1 ]; then
+           echo "Cluster exists"
+          else
+           echo "Cluster does not exist"
+           exit 1
+          fi
+
+      - name: Build, tag and push the image
+        run: |
+          docker build -t 02-hello-world-python-in-k3d:0.1 ./kubernetes/02-hello-world-python-in-k3d/src
+          docker tag 02-hello-world-python-in-k3d:0.1 localhost:12345/02-hello-world-python-in-k3d:0.1
+          docker push localhost:12345/02-hello-world-python-in-k3d:0.1
+
+      - name: Check image existence
+        run: |
+          IMAGE_EXISTS=$(docker images -q 02-hello-world-python-in-k3d:0.1)
+          TAGGED_IMAGE_EXISTS=$(docker images -q localhost:12345/02-hello-world-python-in-k3d:0.1)
+          if [ -n "$IMAGE_EXISTS" ]; then
+           echo "Image 02-hello-world-python-in-k3d:0.1 exists"
+          else
+           echo "Image 02-hello-world-python-in-k3d:0.1 does not exist"
+           exit 1
+          fi
+          if [ -n "$TAGGED_IMAGE_EXISTS" ]; then
+           echo "Image localhost:12345/02-hello-world-python-in-k3d:0.1 exists"
+          else
+           echo "Image localhost:12345/02-hello-world-python-in-k3d:0.1 does not exist"
+           exit 1
+          fi
+
+      - name: Apply manifest
+        run: |
+          kubectl apply -f ./kubernetes/02-hello-world-python-in-k3d/manifests
+
+      - name: Watch container logs
+        run: |
+          sleep 10
+          OUTPUT=$(kubectl logs -l app=hello-world-python --follow)
+          echo "OUTPUT=${OUTPUT}" >> $GITHUB_ENV
+
+      - name: Compare output with expected one
+        run: |
+          if [[ "${{ env.OUTPUT }}" == "${{ env.EXPECTED }}" ]]; then
+            echo "The outputs match"
+          else
+           echo "The outputs don't match"
+           exit 1
+          fi
+

@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis-client-and-server
+spec:
+  containers:
+    - name: redis-server
+      image: demo-registry:5000/13-redis:0.1
+      resources:
+        limits:
+          cpu: "1"
+          memory: "1Gi"
+      volumeMounts:
+        - name: redis-data
+          mountPath: /data
+    - name: redis-client
+      image: redis:alpine3.18
+      command: ["/bin/sh", "-c"]
+      args: ["redis-cli -h localhost -p 6379 SET mykey 'hello' && redis-cli -h localhost -p 6379 SAVE"]
+      resources:
+        limits:
+          cpu: "500m"
+          memory: "500Mi"
+      volumeMounts:
+        - name: redis-data
+          mountPath: /data
+  volumes:
+    - name: redis-data
+      hostPath:
+        path: /data

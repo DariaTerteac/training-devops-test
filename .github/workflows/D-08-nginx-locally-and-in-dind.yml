@@ -1,0 +1,97 @@
+name: D-08 Nginx locally and in Dind-container
+
+on:
+  push:
+    paths:
+      - 'docker/08-nginx-locally-and-in-dind/**'
+      - '.github/workflows/D-08-nginx-locally-and-in-dind.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Verify Docker installation
+        run: docker version
+    
+      - name: Install dockerize
+        run: |
+           curl -sfL $(curl -s https://api.github.com/repos/powerman/dockerize/releases/latest | grep -i /dockerize-$(uname -s)-$(uname -m)\" | cut -d\" -f4) | install /dev/stdin /usr/local/bin/dockerize
+           dockerize --version
+           
+      - name: Run nginxdemos/hello locally and check container status
+        run: docker run -d --name 08-nginx-locally -p 1234:80 nginxdemos/hello
+
+      - name: Check if container was created locally
+        run: |
+          if docker ps -a --format '{{ .Names }}' | grep -q "08-nginx-locally"; then
+          echo "Container '08-nginx-locally' was created"
+          else
+          echo "Container '08-nginx-locally' wasn't created"
+          exit 1
+          fi
+          
+      - name: Check connection with nginx locally
+        run: |
+          dockerize -wait http://localhost:1234 -wait-http-status-code 200 
+          curl http://localhost:1234
+          LOCAL_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" localhost:1234)
+          if [[ "$LOCAL_RESPONSE" -eq 200 ]]; then
+          echo "Successfully connected to nginx locally. Status code $LOCAL_RESPONSE"
+          else
+          echo "Error: Status code $LOCAL_RESPONSE"
+          exit 1
+          fi
+          
+      - name: Create network
+        run: docker network create demo-network
+
+      - name: Run dind container
+        run: docker run --privileged -d -p 1010:2375 -p 8081:8081 --name dind-container -e DOCKER_TLS_CERTDIR="" --network demo-network docker:23.0.1-dind
+
+      - name: Check dind container
+        run: |
+          DIND_STATUS=$(docker inspect -f '{{.State.Status}}' dind-container)
+          echo "Dind status: ${DIND_STATUS}"
+          if [[ "${DIND_STATUS}" != "running" ]]; then
+          echo "Dind container is not running"
+          exit 1
+          fi
+          
+      - name: Run nginx inside dind
+        run: |
+         MAX_RETRIES=10
+         RETRIES=0
+         while ! docker -H localhost:1010 run -d --name 08-nginx-in-dind -p 8081:80 nginxdemos/hello; do
+         RETRIES=$((RETRIES+1))
+         echo "Container wasn't created yet. Retrying in 5 seconds..."
+         sleep 5
+         if [ $RETRIES -ge $MAX_RETRIES ]; then
+          echo "Maximum number of retries reached. Exiting..."
+          exit 1
+         fi
+         done
+         
+         docker -H localhost:1010 ps -a
+          
+      - name: Check if container inside dind was created
+        run: |
+          if ! docker -H localhost:1010 ps -a --format '{{ .Names }}' | grep -q "08-nginx-in-dind"; then
+          echo "Container 08-nginx-in-dind wasn't created"
+          exit 1
+          fi
+          
+      - name: Check connection with nginx inside dind container.
+        run: |
+          curl localhost:8081
+          HTTP_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" localhost:8081)
+          if [[ "$HTTP_RESPONSE" -eq 200 ]]; then
+          echo "Successfully connected to nginx in dind. Status $HTTP_RESPONSE "
+          else
+          echo "Error: Status $HTTP_RESPONSE code"
+          exit 1
+          fi
+

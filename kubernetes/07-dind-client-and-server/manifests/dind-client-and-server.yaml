@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dind-server-and-client
+spec:
+  selector:
+    matchLabels:
+      app: dind-server-and-client
+  template:
+    metadata:
+      labels:
+        app: dind-server-and-client
+    spec:
+      containers:
+      - name: docker-server
+        image: docker:23.0.1-dind
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 2375
+        - containerPort: 1234
+        env:
+         - name: DOCKER_TLS_CERTDIR
+           value: ""
+        securityContext:
+          privileged: true
+      - name: docker-client
+        image: docker:23.0.1-cli-alpine3.17
+        command: ["sh", "-c", "docker -H tcp://localhost:2375 run -p 1234:80 nginxdemos/hello"]
+        env: 
+         - name: DOCKER_HOST
+           value: "tcp://localhost:2375"
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"

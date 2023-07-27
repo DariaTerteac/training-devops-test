@@ -1,0 +1,77 @@
+name: K-11 Java Testcontainers with Argo Workflows
+
+on:
+  push:
+    paths:
+      - ".github/workflows/K-11-testcontainers-java-argo-workflow.yml"
+      - "kubernetes/11-testcontainers-java-argo-workflow/**"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup k3d
+        uses: nolar/setup-k3d-k3s@v1
+
+      - name: Verify Docker installation
+        run: docker version
+
+      - name: Verify Kubernetes installation
+        run: k3d --version
+
+      - name: Initialize and update submodule
+        run: |
+          git submodule update --init --recursive
+          cp -r ./submodules/testcontainers-java ./kubernetes/11-testcontainers-java-argo-workflow/src
+
+      - name: Create cluster with registry
+        run: |
+          k3d cluster create demo-cluster --registry-create demo-registry:12345
+
+      - name: Create namespace and install argo
+        run: |
+          kubectl create namespace argo 
+          kubectl config set-context --current --namespace 'argo'
+          kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.4.6/install.yaml
+
+      - name: Check cluster existence
+        run: |
+          CLUSTER_EXISTS=$(k3d cluster list | grep -c "demo-cluster")
+          if [ "$CLUSTER_EXISTS" -eq 1 ]; then
+             echo "Cluster exists"
+          else
+             echo "Cluster does not exist"
+             exit 1
+          fi
+
+      - name: Build, tag and push Docker image
+        run: |
+          docker build -t 11-tc-java-argo-workflow:0.1 ./kubernetes/11-testcontainers-java-argo-workflow/src
+
+          docker tag 11-tc-java-argo-workflow:0.1 localhost:12345/11-tc-java-argo-workflow:0.1
+
+          docker push localhost:12345/11-tc-java-argo-workflow:0.1
+
+      - name: Apply manifest
+        run: |
+          kubectl apply -f ./kubernetes/11-testcontainers-java-argo-workflow/manifests
+          sleep 20
+
+      - name: Watch `testcontainers-java` container logs
+        run: |
+          kubectl logs tc-java-argo -c main --follow > 11-task-logs.txt
+          BUILD_OUTPUT=$(grep "BUILD SUCCESSFUL" 11-task-logs.txt)
+          echo "BUILD_OUTPUT=${BUILD_OUTPUT}" >> $GITHUB_ENV
+
+      - name: Extract build status and compare
+        run: |
+          if [[ "${{ env.BUILD_OUTPUT }}" == *"BUILD SUCCESSFUL"* ]]; then
+            echo "The workflow is successful"
+          else
+           echo "The workflow is failed"
+           exit 1
+          fi
+

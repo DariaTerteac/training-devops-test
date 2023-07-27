@@ -1,0 +1,18 @@
+FROM powerman/dockerize:0.19.0 as dockerize
+FROM gradle:jdk17-alpine
+
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+WORKDIR /app/
+
+COPY --from=dockerize /usr/local/bin/dockerize /usr/local/bin
+COPY ./testcontainers-java /app
+
+ENV DOCKER_HOST=tcp://dind-container:2375
+ENV USER_ID=${USER_ID}
+ENV GROUP_ID=${GROUP_ID}
+
+WORKDIR /app/examples/redis-backed-cache-testng
+RUN mkdir -p /app/report/gradle
+CMD dockerize -wait $DOCKER_HOST -timeout 20s gradle test -Dorg.gradle.project.buildDir=/app/examples/redis-backed-cache-testng/build && chown -R ${USER_ID}:${GROUP_ID} /app/report

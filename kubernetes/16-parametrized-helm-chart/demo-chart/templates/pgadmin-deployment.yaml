@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgadmin
+  template:
+    metadata:
+      labels:
+        app: pgadmin
+    spec:
+      containers:
+        - name: pgadmin
+          image: {{ .Values.pgadmin.server.image }}
+          env:
+            - name: PGADMIN_DEFAULT_EMAIL
+              value: pgadmin@pgadmin.com
+            - name: PGADMIN_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: pgadmin-password
+          ports:
+            - name: pgadmin
+              containerPort: 80
+              protocol: TCP
+          volumeMounts:
+            - name: pgadmin-data
+              mountPath: /var/lib/pgadmin
+      volumes:
+        - name: pgadmin-data
+          hostPath:
+            path: /pgvolume
+            type: DirectoryOrCreate
+      initContainers:
+        - name: example-cont
+          image: busybox:latest
+          command: ["sh","-c","chown -R 5050:5050 /pgvolume"]
+          volumeMounts:
+            - name: pgadmin-data
+              mountPath: /pgvolume

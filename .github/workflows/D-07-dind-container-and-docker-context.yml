@@ -1,0 +1,65 @@
+name: D-07 Run dind container and switch between docker context
+
+on:
+  push:
+    paths:
+      - 'docker/07-dind-container-and-docker-context/**'
+      - '.github/workflows/D-07-dind-container-and-docker-context.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Verify Docker installation
+        run: docker version
+      
+      - name: Run ubuntu container
+        run: |
+          docker run ubuntu
+          if docker images | grep -q 'ubuntu'; then
+          echo "'ubuntu' image is present in the list of images of default context."
+          else
+          echo "'ubuntu' image is not found in the list of images of default context."
+          exit 1
+          fi
+        
+      - name: Run dind container
+        run: |
+          docker run --privileged -d -p 1234:2375 --name 07-docker-in-docker -e DOCKER_TLS_CERTDIR="" docker:23.0.1-dind
+      
+      - name: Check dind container
+        run: |
+          DIND_STATUS=$(docker inspect -f '{{.State.Status}}' 07-docker-in-docker)
+          echo "Dind status: ${DIND_STATUS}"
+          if [[ "${DIND_STATUS}" != "running" ]]; then
+          echo "Dind container is not running"
+          exit 1
+          fi
+
+      - name: Create new Docker context
+        run: docker context create dind-context --docker "host=http://localhost:1234"
+
+      - name: Get list of contexts
+        run: docker context ls
+
+      - name: Switch to the newly created context
+        run: |
+          docker context use dind-context 
+          ./check_exit_code_and_logs.sh  'docker images'
+          if [ -z "$(docker images -q)" ]; then 
+          echo "The list of images in the dind context is empty as it should"
+          fi
+
+      - name: Switch to the default context
+        run: |
+          docker context use default
+          docker images
+          if [ -z "$(docker images -q)" ]; then 
+          echo "The list of images in the default context is empty"
+          exit 1
+          fi

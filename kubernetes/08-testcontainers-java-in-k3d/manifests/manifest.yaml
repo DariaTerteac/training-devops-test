@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tc-java
+spec:
+  containers:
+    - name: dind-container
+      image: docker:23.0.1-dind-alpine3.17
+      command: [dockerd-entrypoint.sh]
+      securityContext:
+        privileged: true
+      env:
+        - name: DOCKER_TLS_CERTDIR
+          value: ""
+    - name: testcontainers-java
+      image: demo-registry:5000/08-tc-java-in-k3d:0.1
+      command: ["sh", "-c"]
+      args: ["dockerize -wait 'tcp://127.0.0.1:2375' -timeout 30s gradle test"]
+      env:
+        - name: DOCKER_HOST
+          value: "tcp://127.0.0.1:2375"
+        - name: TESTCONTAINERS_RYUK_DISABLED
+          value: "true"
+        - name: TESTCONTAINERS_CHECKS_DISABLE
+          value: "true"
+      volumeMounts:
+        - mountPath: /app/examples/redis-backed-cache-testng/build
+          name: volume
+  volumes:
+    - name: volume
+      hostPath:
+        path: /report

@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server-postgres
+spec:
+  selector:
+    matchLabels:
+      app: server-postgres
+  template:
+    metadata:
+      labels:
+        app: server-postgres
+    spec:
+      containers:
+        - name: server-postgres
+          image: {{ .Values.postgresql.server.image }}
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: db-volume
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: POSTGRES_DB
+            - name: PGDATA
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.configmap.name }}
+                  key: PGDATA
+          ports:
+            - containerPort: 5432
+      volumes:
+      - name: db-volume
+        hostPath:
+          path: /databasevolume

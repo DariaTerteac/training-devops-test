@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: 03-writer-reader
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    spec:
+      containers:
+        - name: writer-container
+          image: ubuntu
+          command:
+            ["/bin/sh", "-c", "echo 'content of test file' > /volume/test1.txt"]
+          volumeMounts:
+            - mountPath: /volume
+              name: demo-volume
+        - name: reader-container
+          image: ubuntu
+          command: ["/bin/sh", "-c", "cat /volume/test1.txt"]
+          volumeMounts:
+          - mountPath: /volume
+            name: demo-volume
+      restartPolicy: Never
+      volumes:
+        - name: demo-volume
+          emptyDir: {}

@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world-node
+spec:
+  selector:
+    matchLabels:
+      app: hello-world-node
+  template:
+    metadata:
+      labels:
+        app: hello-world-node
+    spec:
+      containers:
+      - name: hello-world-node
+        image: demo-registry:5000/03-hello-world-node-in-k3d:0.1
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"

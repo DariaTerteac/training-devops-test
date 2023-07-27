@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-with-4-pods
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: deployment-with-4-pods
+  template:
+    metadata:
+      labels:
+        app: deployment-with-4-pods
+    spec:
+      containers:
+      - name: ngingx-container
+        image: nginxdemos/hello
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 80
+

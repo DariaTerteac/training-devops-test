@@ -1,0 +1,47 @@
+name: D-05 Interconnection via Network
+
+on:
+  push:
+    paths:
+      - 'docker/05-interconnection-via-network/**'
+      - '.github/workflows/D-05-interconnection-via-network.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Verify Docker installation
+        run: docker version
+
+      - name: Create network
+        run: docker network create demo-network
+
+      - name: Run postgres-server
+        run: |
+           docker run -d \
+           --name postgres_server \
+           -p 6432:5432 \
+           --network demo-network \
+           --network-alias psql-server \
+           -e POSTGRES_PASSWORD=pass123 \
+           -e POSTGRES_DB=demodb \
+           postgres:latest
+
+      - name: Check status
+        run: |
+          STATUS=$(docker inspect -f '{{.State.Status}}' postgres_server)
+          echo "Psql Server status: ${STATUS}"
+          if [[ "${STATUS}" != "running" ]]; then
+          echo "Psql Server is not running"
+          exit 1
+          fi
+          
+      - name: Run postgres client
+        run: |
+           ./check_exit_code_and_logs.sh 'docker run --rm --name postgres_client --network demo-network --network-alias psql-client postgres:latest psql postgresql://postgres:pass123@psql-server:5432'
+           echo "The connection between psql-server and psql-client is successful"
