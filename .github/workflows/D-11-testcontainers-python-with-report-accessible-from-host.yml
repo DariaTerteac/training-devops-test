@@ -31,7 +31,7 @@ jobs:
           mkdir ${{ env.TASK_PATH }}/report
           if [ -d "${{ env.TASK_PATH }}/report" ]; then
             echo "Report folder was created"
-            ls ./${{ env.TASK_PATH }}
+            ls ${{ env.TASK_PATH }}
           else
             echo "Report folder wasn't created"
             exit 1
