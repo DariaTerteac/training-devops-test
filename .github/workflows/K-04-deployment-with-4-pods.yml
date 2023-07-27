@@ -36,11 +36,8 @@ jobs:
              exit 1
            fi
            
-      - name: Apply the service
-        run: kubectl apply -f ./kubernetes/04-deployment-with-4-pods/manifests/service-4-pods.yaml 
-
-      - name: Apply the deployment
-        run: kubectl apply -f ./kubernetes/04-deployment-with-4-pods/manifests/deployment-with-4-pods.yaml
+      - name: Apply manifests
+        run: kubectl apply -f ./kubernetes/04-deployment-with-4-pods/manifests
 
       - name: Wait for pods to be ready
         run: kubectl get deployment -n default deployment-with-4-pods -o jsonpath="{range .status.conditions[?(.type == 'Ready')]}{.type} is {.status}{'\n'}{end}"
@@ -77,4 +74,3 @@ jobs:
             echo "Error: Load balancing is not shared between 4 pods"
             exit 1
           fi
-
