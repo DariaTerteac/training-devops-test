@@ -64,7 +64,6 @@ jobs:
 
       - name: Watch container logs
         run: |
-          sleep 10
           OUTPUT=$(kubectl logs -l app=hello-world-java --follow)
           echo "OUTPUT=${OUTPUT}" >> $GITHUB_ENV
 
