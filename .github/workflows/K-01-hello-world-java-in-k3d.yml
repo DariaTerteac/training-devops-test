@@ -7,6 +7,7 @@ on:
 
 env:
   EXPECTED: "Hello world!"
+  TASK_PATH: "${{ github.workspace }}/kubernetes/01-hello-world-java-in-k3d"
 
 jobs:
   build:
@@ -38,12 +39,14 @@ jobs:
            echo "Cluster does not exist"
            exit 1
           fi
-
+      
       - name: Build, tag and push the image
-        run: |
-          docker build -t 01-hello-world-java-in-k3d:0.1 ./kubernetes/01-hello-world-java-in-k3d/src
-          docker tag 01-hello-world-java-in-k3d:0.1 localhost:12345/01-hello-world-java-in-k3d:0.1
-          docker push localhost:12345/01-hello-world-java-in-k3d:0.1
+        uses: docker/build-push-action@v4
+        with:
+         context: ${{ env.TASK_PATH }}/src
+         file: ${{ env.TASK_PATH }}/src/Dockerfile
+         push: true 
+         tags: localhost:12345/01-hello-world-java-in-k3d:0.1
 
       - name: Check image existence
         run: |
@@ -64,7 +67,7 @@ jobs:
           
       - name: Apply manifest
         run: |
-          kubectl apply -f ./kubernetes/01-hello-world-java-in-k3d/manifests
+          kubectl apply -f ${{ env.TASK_PATH }}/manifests
 
       - name: Watch container logs
         run: |
