@@ -82,7 +82,7 @@ jobs:
 
       - name: Check if `report` folder has report after running tests
         run: |
-          if [ -d "${{ github.workspace }}/${{ env.TASK_PATH }}/report/report.html" ]; then
+          if [ -f "${{ github.workspace }}/${{ env.TASK_PATH }}/report/report.html" ]; then
             cat ${{ github.workspace }}/${{ env.TASK_PATH }}/report/report.html
           else
             echo "Report folder is empty after running tests"
