@@ -5,6 +5,9 @@ on:
     paths:
       - ".github/workflows/D-12-testcontainers-node-with-report-accessible-from-host.yml"
       - "docker/12-testcontainers-node-with-report-accessible-from-host/**"
+env:
+  TASK_PATH: "${{ github.workspace }}/docker/12-testcontainers-node-with-report-accessible-from-host"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,27 +24,24 @@ jobs:
       - name: Initialize and update submodule
         run: |
           git submodule update --init --recursive
-          cp -r ./submodules/testcontainers-node ./docker/12-testcontainers-node-with-report-accessible-from-host/src
+          cp -r ./submodules/testcontainers-node  ${{ env.TASK_PATH }}/src
 
       - name: Create report folder and check if it was successfully created
         run: |
-          mkdir ./docker/12-testcontainers-node-with-report-accessible-from-host/report
-          if [ -d "${{ github.workspace }}/docker/12-testcontainers-node-with-report-accessible-from-host/report" ]; then
+          mkdir  ${{ env.TASK_PATH }}/report
+          if [ -d " ${{ env.TASK_PATH }}/report" ]; then
             echo "Report folder was created"
-            cd ./docker/12-testcontainers-node-with-report-accessible-from-host
-            ls
+            ls ${{ env.TASK_PATH }}
           else
             echo "Report folder wasn't created"
             exit 1
           fi
 
       - name: Create network
-        run: |
-          docker network create demo-network
+        run: docker network create demo-network
 
       - name: Run dind container
-        run: |
-          docker run --privileged -d -p 12345:2375 --name dind-container -e DOCKER_TLS_CERTDIR="" --network demo-network docker:23.0.1-dind
+        run: docker run --privileged -d -p 12345:2375 --name dind-container -e DOCKER_TLS_CERTDIR="" --network demo-network docker:23.0.1-dind
 
       - name: Check Docker-in-Docker container
         # Checks the status of the Docker-in-Docker container and exits if not running
@@ -55,19 +55,21 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t 12-testcontainers-node:0.1 --build-arg USER_ID=${{ env.USER_ID }} --build-arg GROUP_ID=${{ env.GROUP_ID }} \
-          ./docker/12-testcontainers-node-with-report-accessible-from-host/src
+          docker build -t 12-testcontainers-node:0.1 \
+          --build-arg USER_ID=${{ env.USER_ID }} \
+          --build-arg GROUP_ID=${{ env.GROUP_ID }} \
+           ${{ env.TASK_PATH }}/src
 
       - name: Run tests in Docker container
         run: |
           BUILD_OUTPUT=$(docker run --name 12-task \
-          --mount type=bind,source=${{ github.workspace }}/docker/12-testcontainers-node-with-report-accessible-from-host/report,destination=/app/testcontainers-node/jest-test-report \
+          --mount type=bind,source= ${{ env.TASK_PATH }}/report,destination=/app/testcontainers-node/jest-test-report \
           --network demo-network 12-testcontainers-node:0.1)
 
       - name: Check if `report` folder has report after running tests
         run: |
-          if test -f "${{ github.workspace }}/docker/12-testcontainers-node-with-report-accessible-from-host/report/index.html"; then
-            cat ${{ github.workspace }}/docker/12-testcontainers-node-with-report-accessible-from-host/report/index.html 
+          if test -f " ${{ env.TASK_PATH }}/report/index.html"; then
+            cat  ${{ env.TASK_PATH }}/report/index.html 
           else 
             echo "Report folder is empty after running tests"
             exit 1
@@ -75,7 +77,7 @@ jobs:
 
       - name: Search for a word in index.html
         run: |
-           if grep -q "passed" ${{ github.workspace }}/docker/12-testcontainers-node-with-report-accessible-from-host/report/index.html; then
+           if grep -q "passed"  ${{ env.TASK_PATH }}/report/index.html; then
             echo "The build passed"
            else
              echo "The build is failed"
@@ -84,7 +86,7 @@ jobs:
 
       - name: Check report file `index.html` rights
         run: |
-          folder_path="${{ github.workspace }}/docker/12-testcontainers-node-with-report-accessible-from-host/report"
+          folder_path=" ${{ env.TASK_PATH }}/report"
           user=$(stat -c '%U' $folder_path)
           group=$(stat -c '%G' $folder_path)
           if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
