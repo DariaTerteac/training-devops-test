@@ -51,7 +51,7 @@ jobs:
         run: |
           docker run -d --network redis-network \
           --name redis-server \
-          --mount type=bind,source=${DATA_FOLDER},target=/data \
+          --mount type=bind,source=${{ github.workspace }}/docker/13-redis-client-and-server/data,target=/data \
           13-redis:0.1
 
       - name: Start Redis Client Container
@@ -61,7 +61,7 @@ jobs:
         run: echo -e "SET key \"hello\"\nSAVE" | docker exec -i redis-client redis-cli -h redis-server
 
       - name: Wait for the `dump.rdb` file to be created
-        run: ./check_exit_code_and_logs.sh  'cat ${DATA_FOLDER}/dump.rdb'
+        run: ./check_exit_code_and_logs.sh  'cat ./docker/13-redis-client-and-server/data/dump.rdb'
 
       - name: Get the key
         run: |
@@ -83,8 +83,8 @@ jobs:
           
       - name: Check report folder rights
         run: |
-          user=$(stat -c '%U' ${DATA_FOLDER})
-          group=$(stat -c '%G' ${DATA_FOLDER})
+          user=$(stat -c '%U' ./docker/13-redis-client-and-server/data)
+          group=$(stat -c '%G' ./docker/13-redis-client-and-server/data)
           if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
           echo "User=$user, $(id -un)"
           echo "Group=$group, $(id -gn)"
