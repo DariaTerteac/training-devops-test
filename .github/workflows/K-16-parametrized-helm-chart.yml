@@ -92,7 +92,7 @@ jobs:
       
    - name: Check Api web page status
      run: |
-          status=$(curl --silent --head http://localhost:${SPRINGBOOT_API_PORT}/app | awk '/^HTTP/{print $2}')
+          status=$(curl --silent  http://localhost:${SPRINGBOOT_API_PORT}/app --output /dev/null --write-out "%{response_code}")
           exit_code=$?
           if [ $exit_code -eq 0 ] && [ "$status" == "200" ]; then
           echo "Spring Boot API exists."
