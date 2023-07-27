@@ -8,7 +8,7 @@ on:
 
 env:
   EXPECTED_KEY: "hello"
-  TASK_PATH: "${{ github.workspace }}/docker/10-testcontainers-java-with-report-accessible-from-host"
+  TASK_PATH: "${{ github.workspace }}/docker/13-redis-client-and-server"
 
 jobs:
   build:
