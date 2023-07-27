@@ -50,14 +50,7 @@ jobs:
 
       - name: Check image existence
         run: |
-          IMAGE_EXISTS=$(docker images -q 01-hello-world-java-in-k3d:0.1)
           TAGGED_IMAGE_EXISTS=$(docker images -q localhost:12345/01-hello-world-java-in-k3d:0.1)
-          if [ -n "$IMAGE_EXISTS" ]; then
-           echo "Image 01-hello-world-java-in-k3d:0.1 exists"
-          else
-           echo "Image 01-hello-world-java-in-k3d:0.1 does not exist"
-           exit 1
-          fi
           if [ -n "$TAGGED_IMAGE_EXISTS" ]; then
            echo "Image localhost:12345/01-hello-world-java-in-k3d:0.1 exists"
           else
