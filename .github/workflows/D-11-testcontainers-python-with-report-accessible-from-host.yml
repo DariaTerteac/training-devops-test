@@ -5,6 +5,9 @@ on:
     paths:
       - ".github/workflows/D-11-testcontainers-python-with-report-accessible-from-host.yml"
       - "docker/11-testcontainers-python-with-report-accessible-from-host/**"
+env:
+  TASK_PATH: "./docker/11-testcontainers-python-with-report-accessible-from-host"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,15 +24,14 @@ jobs:
       - name: Initialize and update submodule
         run: |
           git submodule update --init --recursive
-          cp -r ./submodules/testcontainers-python ./docker/11-testcontainers-python-with-report-accessible-from-host/src
+          cp -r ./submodules/testcontainers-python ${{ env.TASK_PATH }}/src
 
       - name: Create report folder and check if it was successfully created
         run: |
-          mkdir ./docker/11-testcontainers-python-with-report-accessible-from-host/report
-          if [ -d "${{ github.workspace }}/docker/11-testcontainers-python-with-report-accessible-from-host/report" ]; then
+          mkdir ${{ env.TASK_PATH }}/report
+          if [ -d "${{ github.workspace }}/${{ env.TASK_PATH }}/report" ]; then
             echo "Report folder was created"
-            cd ./docker/11-testcontainers-python-with-report-accessible-from-host
-            ls
+            ls ./${{ env.TASK_PATH }}
           else
             echo "Report folder wasn't created"
             exit 1
@@ -58,12 +60,12 @@ jobs:
           docker build -t 11-testcontainers-python:0.1 \
           --build-arg USER_ID=${{ env.USER_ID }} \
           --build-arg GROUP_ID=${{ env.GROUP_ID }} \
-          ./docker/11-testcontainers-python-with-report-accessible-from-host/src
+          ${{ env.TASK_PATH }}/src
 
       - name: Run tests in Docker container
         run: |
           docker run --name 11-task \
-          --mount type=bind,source=${{ github.workspace }}/docker/11-testcontainers-python-with-report-accessible-from-host/report,destination=/app/report \
+          --mount type=bind,source=${{ github.workspace }}/${{ env.TASK_PATH }}/report,destination=/app/report \
           --network demo-network 11-testcontainers-python:0.1 > 11-task-logs.txt
           BUILD_OUTPUT=$(grep "passed" 11-task-logs.txt)
           echo "BUILD_OUTPUT=${BUILD_OUTPUT}" >> $GITHUB_ENV
@@ -80,8 +82,8 @@ jobs:
 
       - name: Check if `report` folder has report after running tests
         run: |
-          if test -f "${{ github.workspace }}/docker/11-testcontainers-python-with-report-accessible-from-host/report/report.html"; then
-            cat ${{ github.workspace }}/docker/11-testcontainers-python-with-report-accessible-from-host/report/report.html
+          if [ -d "${{ github.workspace }}/${{ env.TASK_PATH }}/report/report.html" ]; then
+            cat ${{ github.workspace }}/${{ env.TASK_PATH }}/report/report.html
           else
             echo "Report folder is empty after running tests"
             exit 1
@@ -89,7 +91,7 @@ jobs:
 
       - name: Check report file `report.html` rights
         run: |
-          folder_path="${{ github.workspace }}/docker/11-testcontainers-python-with-report-accessible-from-host/report"
+          folder_path="${{ github.workspace }}/${{ env.TASK_PATH }}/report"
           user=$(stat -c '%U' $folder_path)
           group=$(stat -c '%G' $folder_path)
           if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
@@ -99,4 +101,3 @@ jobs:
           echo "Error: user and group are incorrect"
           exit 1
           fi
-         
