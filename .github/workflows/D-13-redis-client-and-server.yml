@@ -31,8 +31,8 @@ jobs:
 
       - name: Create data folder and check if it was successfully created
         run: |
-          mkdir ${{ env.TASK_PATH }}/data
-          if [ -d "${{ env.TASK_PATH }}/data" ]; then
+          mkdir ${{ github.workspace }}/docker/13-redis-client-and-server/data
+          if [ -d "${{ github.workspace }}/docker/13-redis-client-and-server/data" ]; then
             echo "Data folder was created"
             ls ${{ env.TASK_PATH }}
           else
