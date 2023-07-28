@@ -5,6 +5,9 @@ on:
     paths:
       - ".github/workflows/K-09-testcontainers-python-in-k3d.yml"
       - "kubernetes/09-testcontainers-python-in-k3d/**"
+env:
+  TASK_PATH: "${{ github.workspace }}/kubernetes/09-testcontainers-python-in-k3d"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,14 +33,14 @@ jobs:
       - name: Initialize and update submodule
         run: |
           git submodule update --init --recursive
-          cp -r ./submodules/testcontainers-python ./kubernetes/09-testcontainers-python-in-k3d/src
+          cp -r ./submodules/testcontainers-python ${{ env.TASK_PATH }}/src
 
       - name: Create report folder and check if it was successfully created
         run: |
-          mkdir ./kubernetes/09-testcontainers-python-in-k3d/report
-          if [ -d "${{ github.workspace }}/kubernetes/09-testcontainers-python-in-k3d/report" ]; then
+          mkdir ${{ env.TASK_PATH }}/report
+          if [ -d "${{ env.TASK_PATH }}/report" ]; then
             echo "Report folder was created"
-            ls ./kubernetes/09-testcontainers-python-in-k3d/report
+            ls ${{ env.TASK_PATH }}/report
           else
             echo "Report folder wasn't created"
             exit 1
@@ -47,7 +50,7 @@ jobs:
         run: |
           k3d cluster create demo-cluster \
           --registry-create demo-registry:12345 \
-          --volume ${{ github.workspace }}/kubernetes/09-testcontainers-python-in-k3d/report:/report
+          --volume ${{ env.TASK_PATH }}/report:/report
 
       - name: Check cluster existence
         run: |
@@ -60,17 +63,20 @@ jobs:
           fi
 
       - name: Build, tag and push Docker image
-        run: |
-          docker build -t 09-tc-python-in-k3d:0.1 --build-arg USER_ID=${{ env.USER_ID }} --build-arg GROUP_ID=${{ env.GROUP_ID }} \
-          ./kubernetes/09-testcontainers-python-in-k3d/src
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ env.TASK_PATH }}/src
+          file: ${{ env.TASK_PATH }}/src/Dockerfile
+          push: true
+          tags: localhost:12345/09-tc-python-in-k3d:0.1
+          build-args: |
+            USER_ID=$(id -u)
+            GROUP_ID=$(id -g)
 
-          docker tag 09-tc-python-in-k3d:0.1 localhost:12345/09-tc-python-in-k3d:0.1
-
-          docker push localhost:12345/09-tc-python-in-k3d:0.1
 
       - name: Apply manifest
         run: |
-          kubectl apply -f ./kubernetes/09-testcontainers-python-in-k3d/manifests
+          kubectl apply -f ${{ env.TASK_PATH }}/manifests
           sleep 20
 
       - name: Watch `testcontainers-python` container logs
@@ -100,8 +106,8 @@ jobs:
 
       - name: Check if `report` folder has report after running tests
         run: |
-          if test -f "${{ github.workspace }}/kubernetes/09-testcontainers-python-in-k3d/report/report.html"; then
-            cat ${{ github.workspace }}/kubernetes/09-testcontainers-python-in-k3d/report/report.html
+          if [ -f "${{ env.TASK_PATH }}/report/report.html" ]; then
+            cat ${{ env.TASK_PATH }}/report/report.html
           else
             echo "Report folder is empty after running tests"
             exit 1
@@ -109,7 +115,7 @@ jobs:
 
       - name: Check report file `report.html` rights
         run: |
-           folder_path="${{ github.workspace }}/kubernetes/09-testcontainers-python-in-k3d/report"
+           folder_path="${{ env.TASK_PATH }}/report"
            user=$(stat -c '%U' $folder_path)
            group=$(stat -c '%G' $folder_path)
            if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
@@ -119,5 +125,3 @@ jobs:
            echo "Error: user and group are incorrect"
            exit 1
            fi
-
-
