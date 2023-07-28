@@ -6,7 +6,7 @@ on:
       - ".github/workflows/K-08-testcontainers-java-in-k3d.yml"
       - "kubernetes/08-testcontainers-java-in-k3d/**"
 env:
-  TASK_PATH: "${{ github.workspace }}/kubernetes/08-testcontainers-java-in-k3d }}"
+  TASK_PATH: "${{ github.workspace }}/kubernetes/08-testcontainers-java-in-k3d"
 
 jobs:
   build:
