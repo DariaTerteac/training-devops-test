@@ -91,7 +91,7 @@ jobs:
           if [[ $CONTAINER_EXIT_CODE -eq 0 ]]; then
           echo "Container exited successfully"
             else
-            echo "Container did not exit successfully"
+            echo "Container did not exit successfully. Exit code: ${CONTAINER_EXIT_CODE}"
           exit 1
           fi
 
