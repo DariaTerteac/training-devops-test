@@ -30,7 +30,7 @@ jobs:
         run: |
           git submodule update --init --recursive
           cp -r ./submodules/testcontainers-java ${{ env.TASK_PATH }}/src
-
+          
       - name: Create cluster with registry
         run: |
           k3d cluster create demo-cluster --registry-create demo-registry:12345
@@ -65,7 +65,7 @@ jobs:
       - name: Apply manifest
         run: |
           kubectl apply -f ${{ env.TASK_PATH }}/manifests
-          sleep 20
+          kubectl wait --for=condition=Ready pods --all --all-namespaces
 
       - name: Watch `testcontainers-java` container logs
         run: |
