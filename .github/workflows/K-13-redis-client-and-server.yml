@@ -7,7 +7,7 @@ on:
       - "kubernetes/13-redis-client-and-server/**"
 
 env:
-  TASK_PATH: "${{ env.TASK_PATH }}"
+  TASK_PATH: "${{ github.workspace }}/kubernetes/13-redis-client-and-server"
 
 jobs:
   build:
