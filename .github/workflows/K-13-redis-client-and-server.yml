@@ -5,6 +5,10 @@ on:
     paths:
       - ".github/workflows/K-13-redis-client-and-server.yml"
       - "kubernetes/13-redis-client-and-server/**"
+
+env:
+  TASK_PATH: "${{ env.TASK_PATH }}"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,10 +38,10 @@ jobs:
 
       - name: Create report folder and check if it was successfully created
         run: |
-          mkdir ./kubernetes/13-redis-client-and-server/data
-          if [ -d "${{ github.workspace }}/kubernetes/13-redis-client-and-server/data" ]; then
+          mkdir ${{ env.TASK_PATH }}/data
+          if [ -d "${{ env.TASK_PATH }}/data" ]; then
             echo "Report folder was created"
-            ls ./kubernetes/13-redis-client-and-server
+            ls ${{ env.TASK_PATH }}
           else
             echo "Report folder wasn't created"
             exit 1
@@ -47,7 +51,7 @@ jobs:
         run: |
           k3d cluster create demo-cluster \
           --registry-create demo-registry:12345 \
-          --volume ${{ github.workspace }}/kubernetes/13-redis-client-and-server/data:/data
+          --volume ${{ env.TASK_PATH }}/data:/data
           
       - name: Check cluster existence
         run: |
@@ -64,23 +68,23 @@ jobs:
           docker build -t 13-redis:0.1 \
           --build-arg USER_ID=${{ env.USER_ID }} \
           --build-arg GROUP_ID=${{ env.GROUP_ID }} \
-          ./kubernetes/13-redis-client-and-server/src
+          ${{ env.TASK_PATH }}/src
           
           docker tag 13-redis:0.1 localhost:12345/13-redis:0.1
           
           docker push localhost:12345/13-redis:0.1
           
       - name: Apply manifests
-        run: kubectl apply -f ./kubernetes/13-redis-client-and-server/manifests
+        run: kubectl apply -f ${{ env.TASK_PATH }}/manifests
             
       - name: Wait for the `dump.rdb` file to be created
-        run: ./check_exit_code_and_logs.sh  'cat ./kubernetes/13-redis-client-and-server/data/dump.rdb'
+        run: ./check_exit_code_and_logs.sh  'cat ${{ env.TASK_PATH }}/data/dump.rdb'
 
       - name: Get the key
         run: |
           docker run -d --name redis-container redis:alpine3.18
           docker stop redis-container
-          docker cp ${{ github.workspace }}/kubernetes/13-redis-client-and-server/data/dump.rdb redis-container:/data
+          docker cp ${{ env.TASK_PATH }}/data/dump.rdb redis-container:/data
           docker start redis-container
           KEY=$(docker exec -i redis-container redis-cli get mykey)
           echo "KEY=${KEY}" >> $GITHUB_ENV
@@ -96,7 +100,7 @@ jobs:
 
       - name: Check report folder rights
         run: |
-           folder_path="${{ github.workspace }}/kubernetes/13-redis-client-and-server/data"
+           folder_path="${{ env.TASK_PATH }}/data"
            user=$(stat -c '%U' $folder_path)
            group=$(stat -c '%G' $folder_path)
            if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
