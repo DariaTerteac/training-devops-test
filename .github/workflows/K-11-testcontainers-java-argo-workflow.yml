@@ -65,7 +65,7 @@ jobs:
       - name: Apply manifest
         run: |
           kubectl apply -f ${{ env.TASK_PATH }}/manifests
-          kubectl wait --for=condition=Ready pods --all --all-namespaces
+          kubectl wait --for=condition=Ready pods --all -n argo
 
       - name: Watch `testcontainers-java` container logs
         run: |
