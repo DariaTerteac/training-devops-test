@@ -63,16 +63,15 @@ jobs:
           fi
           
       - name: Build, tag and push Docker image
-        run: |
-          docker build -t 10-tc-node-in-k3d:0.1 \
-          --build-arg USER_ID=${{ env.USER_ID }} \
-          --build-arg GROUP_ID=${{ env.GROUP_ID }} \
-          ${{ env.TASK_PATH }}/src
-          
-          docker tag 10-tc-node-in-k3d:0.1 localhost:12345/10-tc-node-in-k3d:0.1
-          
-          docker push localhost:12345/10-tc-node-in-k3d:0.1
-          
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ env.TASK_PATH }}/src
+          file: ${{ env.TASK_PATH }}/src/Dockerfile
+          push: true
+          tags: localhost:12345/10-tc-node-in-k3d:0.1
+          build-args: |
+            USER_ID=$(id -u)
+            GROUP_ID=$(id -g)
       - name: Apply manifest
         run: |
           kubectl apply -f ${{ env.TASK_PATH }}/manifests
