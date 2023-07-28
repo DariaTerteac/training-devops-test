@@ -5,6 +5,10 @@ on:
     paths:
       - ".github/workflows/K-12-three-tests-in-argo-workflows.yml"
       - "kubernetes/12-three-tests-in-argo-workflows/**"
+
+env:
+  TASK_PATH: "${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,16 +37,16 @@ jobs:
       - name: Initialize and update submodule
         run: |
           git submodule update --init --recursive
-          cp -r ./submodules/testcontainers-java ./kubernetes/12-three-tests-in-argo-workflows/src
-          cp -r ./submodules/testcontainers-python ./kubernetes/12-three-tests-in-argo-workflows/src
-          cp -r ./submodules/testcontainers-node ./kubernetes/12-three-tests-in-argo-workflows/src
+          cp -r ./submodules/testcontainers-java ${{ env.TASK_PATH }}/src
+          cp -r ./submodules/testcontainers-python ${{ env.TASK_PATH }}/src
+          cp -r ./submodules/testcontainers-node ${{ env.TASK_PATH }}/src
 
       - name: Create report folder and check if it was successfully created
         run: |
-          mkdir ./kubernetes/12-three-tests-in-argo-workflows/report
-          if [ -d "${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report" ]; then
+          mkdir ${{ env.TASK_PATH }}/report
+          if [ -d "${{ env.TASK_PATH }}/report" ]; then
             echo "Report folder was created"
-            ls ./kubernetes/12-three-tests-in-argo-workflows/report
+            ls ${{ env.TASK_PATH }}/report
           else
             echo "Report folder wasn't created"
             exit 1
@@ -52,7 +56,8 @@ jobs:
         run: |
           k3d cluster create demo-cluster \
           --registry-create demo-registry:12345 \
-          --volume ${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report:/report
+          --volume ${{ env.TASK_PATH }}/report:/report
+
       - name: Create namespace and install argo
         run: |
           kubectl create namespace argo
@@ -67,86 +72,63 @@ jobs:
           else
              echo "Cluster does not exist"
              exit 1
-          fi
+          fi 
 
       - name: Build, tag and push `12-testcontainers-java-argo:0.1` image
-        run: |
-          docker build -t 12-testcontainers-java-argo:0.1 \
-          --build-arg USER_ID=$(id -u) \
-          --build-arg GROUP_ID=$(id -g) \
-          -f ./kubernetes/12-three-tests-in-argo-workflows/src/Dockerfile-java \
-          ./kubernetes/12-three-tests-in-argo-workflows/src/
-          docker tag 12-testcontainers-java-argo:0.1 localhost:12345/12-testcontainers-java-argo:0.1
-          docker push localhost:12345/12-testcontainers-java-argo:0.1
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ env.TASK_PATH }}/src
+          file: ${{ env.TASK_PATH }}/src/Dockerfile-java
+          push: true
+          tags: localhost:12345/12-testcontainers-java-argo:0.1
+          build-args: |
+            USER_ID=$(id -u)
+            GROUP_ID=$(id -g)
 
       - name: Build, tag and push `12-testcontainers-python-argo:0.1` image
-        run: |
-          docker build -t 12-testcontainers-python-argo:0.1 \
-          --build-arg USER_ID=$(id -u) \
-          --build-arg GROUP_ID=$(id -g) \
-          -f ./kubernetes/12-three-tests-in-argo-workflows/src/Dockerfile-python \
-          ./kubernetes/12-three-tests-in-argo-workflows/src
-          docker tag 12-testcontainers-python-argo:0.1 localhost:12345/12-testcontainers-python-argo:0.1
-          docker push localhost:12345/12-testcontainers-python-argo:0.1
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ env.TASK_PATH }}/src
+          file: ${{ env.TASK_PATH }}/src/Dockerfile-python
+          push: true
+          tags: localhost:12345/12-testcontainers-python-argo:0.1
+          build-args: |
+            USER_ID=$(id -u)
+            GROUP_ID=$(id -g)
 
       - name: Build, tag and push `12-testcontainers-node-argo:0.1` image
-        run: |
-          docker build -t 12-testcontainers-node-argo:0.1 \
-          --build-arg USER_ID=$(id -u) \
-          --build-arg GROUP_ID=$(id -g) \
-          -f ./kubernetes/12-three-tests-in-argo-workflows/src/Dockerfile-node \
-          ./kubernetes/12-three-tests-in-argo-workflows/src/
-          docker tag 12-testcontainers-node-argo:0.1 localhost:12345/12-testcontainers-node-argo:0.1
-          docker push localhost:12345/12-testcontainers-node-argo:0.1
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ env.TASK_PATH }}/src
+          file: ${{ env.TASK_PATH }}/src/Dockerfile-node
+          push: true
+          tags: localhost:12345/12-testcontainers-node-argo:0.1
+          build-args: |
+            USER_ID=$(id -u)
+            GROUP_ID=$(id -g)
 
       - name: Apply manifest
         run: |
-          kubectl apply -f ./kubernetes/12-three-tests-in-argo-workflows/manifests
+          kubectl apply -f ${{ env.TASK_PATH }}/manifests
           sleep 20
 
       - name: Wait for python report to appear
         run: |
-          python_directory_to_check="${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/python"
-           while true; do
-           if [ -d "$python_directory_to_check" ]; then
-            echo "Directory $python_directory_to_check is present."
-            break
-           else
-            echo "Directory $python_directory_to_check not found. "
-            sleep 30
-           fi
-           done
+          ./check_exit_code_and_logs.sh '-d ${{ env.TASK_PATH }}/report/python'
 
       - name: Wait for node report to appear
         run: |
-          node_directory_to_check="${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/node"
-           while true; do
-           if [ -d "$node_directory_to_check" ]; then
-            echo "Directory $node_directory_to_check is present."
-            break
-           else
-            echo "Directory $node_directory_to_check not found. "
-            sleep 30
-           fi
-           done
+          ./check_exit_code_and_logs.sh '-d ${{ env.TASK_PATH }}/report/node'
 
       - name: Wait for java report to appear
         run: |
-          java_directory_to_check="${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/gradle"
-           while true; do
-           if [ -d "$java_directory_to_check" ]; then
-            echo "Directory $java_directory_to_check is present."
-            break
-           else
-            echo "Directory $java_directory_to_check not found. "
-            sleep 30
-           fi
-           done
+          ./check_exit_code_and_logs.sh '-d ${{ env.TASK_PATH }}/report/gradle'
+
 
       - name: Check if testcontainers-node build was successful
         run: |
-           if grep -q "4 passed" ${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/node/index.html; then
-           w3m "${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/node/index.html"
+           if grep -q "4 passed" ${{ env.TASK_PATH }}/report/node/index.html; then
+           w3m "${{ env.TASK_PATH }}/report/node/index.html"
             echo "The testcontainers-node build was successful"
            else
              echo "The testcontainers-node build was failed"
@@ -155,8 +137,8 @@ jobs:
 
       - name: Check if testcontainers-python build was successful
         run: |
-           if grep -q "2 passed" ${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/python/report.html; then
-            w3m "${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/python/report.html"
+           if grep -q "2 passed" ${{ env.TASK_PATH }}/report/python/report.html; then
+            w3m "${{ env.TASK_PATH }}/report/python/report.html"
             echo "The testcontainers-python build was successful"
            else
              echo "The testcontainers-python build was failed"
@@ -165,8 +147,8 @@ jobs:
 
       - name: Check if testcontainers-java build was successful
         run: |
-             if grep -o "Success" ${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/gradle/index.html; then
-             w3m "${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report/gradle/index.html"
+             if grep -o "Success" ${{ env.TASK_PATH }}/report/gradle/index.html; then
+             w3m "${{ env.TASK_PATH }}/report/gradle/index.html"
              echo "The testcontainers-java build was successful"
              else
              echo "The testcontainers-java build was failed"
@@ -175,7 +157,7 @@ jobs:
 
       - name: Check report folder rights
         run: |
-           folder_path="${{ github.workspace }}/kubernetes/12-three-tests-in-argo-workflows/report"
+           folder_path="${{ env.TASK_PATH }}/report"
            user=$(stat -c '%U' $folder_path)
            group=$(stat -c '%G' $folder_path)
            if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
