@@ -80,3 +80,7 @@ jobs:
    - name: Check PSQL connection
      run: |
        ./check_exit_code_and_logs.sh  'pg_isready -h localhost'
+   
+   - name: Setup tmate session
+     if: ${{ failure() }}
+     uses: mxschmitt/action-tmate@v3.11
