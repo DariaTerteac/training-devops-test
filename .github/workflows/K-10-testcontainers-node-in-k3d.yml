@@ -6,7 +6,7 @@ on:
       - ".github/workflows/K-10-testcontainers-node-in-k3d.yml"
       - "kubernetes/10-testcontainers-node-in-k3d/**"
 env:
-  TASK_PATH: "${{ env.TASK_PATH }}"
+  TASK_PATH: "${{ github.workspace }}/kubernetes/10-testcontainers-node-in-k3d"
 
 jobs:
   build:
