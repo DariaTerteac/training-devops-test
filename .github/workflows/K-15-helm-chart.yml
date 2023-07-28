@@ -84,14 +84,7 @@ jobs:
         
    - name: Check PSQL connection
      run: |
-       CONNECTION_CHECK=$(pg_isready -h localhost -p 6432)
-        ./check_exit_code_and_logs.sh '$CONNECTION_CHECK'
-        if [[ "${{ env.CONNECTION_CHECK }}" == *"accepting connections"* ]]; then
-            echo "The connection is up"
-          else
-           echo "The connection is failed"
-           exit 1
-          fi
+        ./check_exit_code_and_logs.sh 'pg_isready -h localhost -p 6432'
    
    - name: Setup tmate session
      if: ${{ failure() }}
