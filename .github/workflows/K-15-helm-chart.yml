@@ -54,7 +54,7 @@ jobs:
         -p ${{ env.SPRINGBOOT_API_PORT }}:8080@loadbalancer \
         -p ${{ env.PSQL_PORT }}:6432@loadbalancer
       
-   - name: Build, tag and push the python image
+   - name: Build, tag and push the image
      uses: docker/build-push-action@v4
      with:
          context: ${{ env.SRC_FOLDER }}
@@ -77,12 +77,6 @@ jobs:
       sites: '["http://localhost:${{ env.PGADMIN_PORT }}/app", "http://localhost:${{ env.SPRINGBOOT_API_PORT }}/login"'
       expected: '[200, 200]'
       
-   - name: PSQL connection
+   - name: Check PSQL connection
      run: |
-       ./check_exit_code_and_logs.sh  'psql postgresql://md_dterteac:123@localhost:${{ env.PSQL_PORT }}/demodb'
-       
-   - name: Setup tmate session
-     if: ${{ failure() }}
-     uses: mxschmitt/action-tmate@v3.11
-     
-     
+       ./check_exit_code_and_logs.sh  'pg_isready postgresql://md_dterteac:123@localhost:${{ env.PSQL_PORT }}/demodb'
