@@ -114,17 +114,43 @@ jobs:
 
       - name: Wait for python report to appear
         run: |
-          ./check_exit_code_and_logs.sh '${{ env.TASK_PATH }}/report/python'
-
+          python_directory_to_check="${{ env.TASK_PATH }}/report/python"
+           while true; do
+           if [ -d "$python_directory_to_check" ]; then
+            echo "Directory $python_directory_to_check is present."
+            break
+           else
+            echo "Directory $python_directory_to_check not found. "
+            sleep 30  
+           fi
+           done
+           
       - name: Wait for node report to appear
         run: |
-          ./check_exit_code_and_logs.sh '${{ env.TASK_PATH }}/report/node'
-
+          node_directory_to_check="${{ env.TASK_PATH }}/report/node"
+           while true; do
+           if [ -d "$node_directory_to_check" ]; then
+            echo "Directory $node_directory_to_check is present."
+            break
+           else
+            echo "Directory $node_directory_to_check not found. "
+            sleep 30 
+           fi
+           done
+           
       - name: Wait for java report to appear
         run: |
-          ./check_exit_code_and_logs.sh '${{ env.TASK_PATH }}/report/gradle'
-
-
+          java_directory_to_check="${{ env.TASK_PATH }}/report/gradle"
+           while true; do
+           if [ -d "$java_directory_to_check" ]; then
+            echo "Directory $java_directory_to_check is present."
+            break
+           else
+            echo "Directory $java_directory_to_check not found. "
+            sleep 30 
+           fi
+           done  
+           
       - name: Check if testcontainers-node build was successful
         run: |
            if grep -q "4 passed" ${{ env.TASK_PATH }}/report/node/index.html; then
