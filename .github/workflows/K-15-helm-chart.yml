@@ -15,6 +15,7 @@ jobs:
     PGADMIN_PORT: "18081"
     SPRINGBOOT_API_PORT: "18080"
     PSQL_PORT: "6432"
+    PSQL_PASSWORD: ${{ secrets.PSQL_PASSWORD }}
       
   steps:
    - name: Checkout repository
@@ -79,7 +80,10 @@ jobs:
       
    - name: Check PSQL connection
      run: |
-        ./check_exit_code_and_logs.sh  'psql postgresql://md_dterteac:${{ secrets.PSQL_PASSWORD }}@localhost:${{ env.PSQL_PORT }}/demodb'
+        ./check_exit_code_and_logs.sh  'psql postgresql://md_dterteac:${{ env.PSQL_PASSWORD }}@localhost:${{ env.PSQL_PORT }}/demodb'
+        
+   - name: Check PSQL connection
+     run: |
         CONNECTION_CHECK=$(pg_isready -h localhost -p 6432)
         ./check_exit_code_and_logs.sh "$CONNECTION_CHECK"
         if [[ "${{ env.CONNECTION_CHECK }}" == *"accepting connections"* ]]; then
