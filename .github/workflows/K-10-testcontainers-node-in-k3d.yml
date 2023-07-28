@@ -72,10 +72,11 @@ jobs:
           build-args: |
             USER_ID=$(id -u)
             GROUP_ID=$(id -g)
+            
       - name: Apply manifest
         run: |
           kubectl apply -f ${{ env.TASK_PATH }}/manifests
-          sleep 20
+          ./check_exit_code_and_logs.sh 'kubectl wait pod tc-node -n default --for=condition=Ready'
           
       - name: Watch `testcontainers-node` container logs
         run: |
@@ -95,7 +96,7 @@ jobs:
       
       - name: Check if `report` folder has report after running tests
         run: |
-          if [ -d "${{ env.TASK_PATH }}/report" ]; then
+          if [ -f "${{ env.TASK_PATH }}/report/index.html" ]; then
             cat ${{ env.TASK_PATH }}/report/index.html
           else
             echo "Report folder is empty after running tests"
