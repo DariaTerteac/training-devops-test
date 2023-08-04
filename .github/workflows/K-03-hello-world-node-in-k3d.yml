@@ -39,7 +39,6 @@ jobs:
            echo "Cluster does not exist"
            exit 1
           fi
-
       - name: Build, tag and push the image
         uses: docker/build-push-action@v4
         with:
@@ -56,7 +55,7 @@ jobs:
            echo "Image ${{ env.IMAGE_NAME }} does not exist"
            exit 1
           fi
-
+          
       - name: Apply manifest
         run: kubectl apply -f  ${{ env.TASK_PATH }}/manifests
 
@@ -65,7 +64,7 @@ jobs:
           kubectl wait deployment -n default hello-world-node --for=condition=Available --timeout=1m
           OUTPUT=$(kubectl logs -l app=hello-world-node --follow)
           echo "OUTPUT=${OUTPUT}" >> $GITHUB_ENV
-
+          
       - name: Compare output with expected one
         run: |
           if [[ "${{ env.OUTPUT }}" == "${{ env.EXPECTED }}" ]]; then
