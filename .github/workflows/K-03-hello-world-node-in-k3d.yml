@@ -50,8 +50,7 @@ jobs:
 
       - name: Check image existence
         run: |
-          TAGGED_IMAGE_EXISTS=$(docker images -q ${{ env.IMAGE_NAME }})
-          if [ -n "$TAGGED_IMAGE_EXISTS" ]; then
+         if [ -n "$(docker images -q $IMAGE_NAME)" ]; then
            echo "Image ${{ env.IMAGE_NAME }} exists"
           else
            echo "Image ${{ env.IMAGE_NAME }} does not exist"
