@@ -8,7 +8,7 @@ on:
 
 env:
   EXPECTED_KEY: "hello"
-  DATA_FOLDER: "${{ github.workspace }}/docker/13-redis-client-and-server/data"
+  TASK_FOLDER: "${{ github.workspace }}/docker/13-redis-client-and-server"
 
 jobs:
   build:
@@ -19,7 +19,7 @@ jobs:
         run: |
           echo "USER_ID=$(id -u)" >> $GITHUB_ENV
           echo "GROUP_ID=$(id -g)" >> $GITHUB_ENV
-
+          
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -31,47 +31,51 @@ jobs:
 
       - name: Create data folder and check if it was successfully created
         run: |
-          mkdir ${DATA_FOLDER}
-          if [ -d ${DATA_FOLDER} ]; then
+          mkdir ${{ env.TASK_FOLDER }}/data
+          if [ -d "${{ env.TASK_FOLDER }}/data" ]; then
             echo "Data folder was created"
-            ls ./docker/13-redis-client-and-server
+            ls ${{ env.TASK_FOLDER }}
           else
             echo "Data folder is not created"
             exit 1
           fi
-
+          
       - name: Build, tag and push the image
         run: |
           docker build -t 13-redis:0.1 \
           --build-arg USER_ID=${{ env.USER_ID }} \
           --build-arg GROUP_ID=${{ env.GROUP_ID }} \
           ./docker/13-redis-client-and-server/src
-
+          
       - name: Run server container
         run: |
           docker run -d --network redis-network \
           --name redis-server \
-          --mount type=bind,source=${{ github.workspace }}/docker/13-redis-client-and-server/data,target=/data \
+          --mount type=bind,source=${{ env.TASK_FOLDER }}/data,target=/data \
           13-redis:0.1
-
+          
       - name: Start Redis Client Container
         run: docker run -d --name redis-client --network redis-network redis sleep 20
 
       - name: Set key using Redis CLI
-        run: echo -e "SET key \"hello\"\nSAVE" | docker exec -i redis-client redis-cli -h redis-server
+        run: |
+           echo -e "SET key \"hello\"\nSAVE" | docker exec -i redis-client redis-cli -h redis-server
 
       - name: Wait for the `dump.rdb` file to be created
-        run: ./check_exit_code_and_logs.sh  'cat ./docker/13-redis-client-and-server/data/dump.rdb'
+        run: ./check_exit_code_and_logs.sh  'cat ${{ env.TASK_FOLDER }}/data/dump.rdb'
+
+      - name: Check if dump.rdb is not empty 
+        run: ./check_exit_code_and_logs.sh '! -s ${{ env.TASK_FOLDER }}/data/dump.rdb'
 
       - name: Get the key
         run: |
           docker run -d --name redis-container redis:alpine3.18
-          docker cp ./docker/13-redis-client-and-server/data/dump.rdb redis-container:/data
+          docker cp ${{ env.TASK_FOLDER }}/data/dump.rdb redis-container:/data
           docker stop redis-container
           docker start redis-container
           KEY=$(docker exec -i redis-container redis-cli get key)
           echo "KEY=${KEY}" >> $GITHUB_ENV
-
+          
       - name: Check the key value
         run: |
           if [[ "${{ env.KEY }}" == "${{ env.EXPECTED_KEY }}" ]]; then
@@ -83,8 +87,9 @@ jobs:
           
       - name: Check report folder rights
         run: |
-          user=$(stat -c '%U' ./docker/13-redis-client-and-server/data)
-          group=$(stat -c '%G' ./docker/13-redis-client-and-server/data)
+          folder_path="${{ env.TASK_FOLDER }}/data"
+          user=$(stat -c '%U' $folder_path)
+          group=$(stat -c '%G' $folder_path)
           if [[ "$user" == "$(id -un)" && "$group" == "$(id -gn)" ]]; then
           echo "User=$user, $(id -un)"
           echo "Group=$group, $(id -gn)"
