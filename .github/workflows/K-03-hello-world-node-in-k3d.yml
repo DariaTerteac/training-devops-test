@@ -28,8 +28,7 @@ jobs:
         run: k3d --version
 
       - name: Create cluster
-        run: |
-          k3d cluster create demo-cluster --registry-create demo-registry:12345
+        run: k3d cluster create demo-cluster --registry-create demo-registry:12345
 
       - name: Check cluster existence
         run: |
@@ -58,9 +57,8 @@ jobs:
            echo "Image ${{ env.IMAGE_NAME }} does not exist"
            exit 1
           fi
-
       - name: Apply manifest
-        run: kubectl apply -f ./kubernetes/03-hello-world-node-in-k3d/manifests
+        run: kubectl apply -f  ${{ env.TASK_PATH }}/manifests
 
       - name: Watch container logs
         run: |
