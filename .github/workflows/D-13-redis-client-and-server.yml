@@ -58,14 +58,13 @@ jobs:
         run: docker run -d --name redis-client --network redis-network redis sleep 20
 
       - name: Set key using Redis CLI
-        run: |
-           echo -e "SET key \"hello\"\nSAVE" | docker exec -i redis-client redis-cli -h redis-server
+        run: echo -e "SET key \"hello\"\nSAVE" | docker exec -i redis-client redis-cli -h redis-server
 
       - name: Wait for the `dump.rdb` file to be created
-        run: ./check_exit_code_and_logs.sh  'cat ${{ env.TASK_FOLDER }}/data/dump.rdb'
+        run: ./check_exit_code_and_logs.sh  'cat ${{ github.workspace }}/docker/13-redis-client-and-server/data/dump.rdb'
 
       - name: Check if dump.rdb is not empty
-        run: ./check_exit_code_and_logs.sh '! -s ${{ env.TASK_FOLDER }}/data/dump.rdb'
+        run: ./check_exit_code_and_logs.sh '! -s ${{ github.workspace }}/docker/13-redis-client-and-server/data/dump.rdb'
 
       - name: Get the key
         run: |
