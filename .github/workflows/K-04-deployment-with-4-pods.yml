@@ -6,6 +6,9 @@ on:
       - 'kubernetes/04-deployment-with-4-pods/**'
       - '.github/workflows/K-04-deployment-with-4-pods.yml'
 
+env:
+  TASK_PATH: "${{ github.workspace }}/kubernetes/04-deployment-with-4-pods"
+  
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -37,7 +40,7 @@ jobs:
            fi
            
       - name: Apply manifests
-        run: kubectl apply -f ./kubernetes/04-deployment-with-4-pods/manifests
+        run: kubectl apply-f  ${{ env.TASK_PATH }}/manifests
 
       - name: Wait for pods to be ready
         run: kubectl wait deployment -n default deployment-with-4-pods --for=condition=Available --timeout=1m
