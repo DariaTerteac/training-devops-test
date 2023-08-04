@@ -40,7 +40,7 @@ jobs:
            fi
            
       - name: Apply manifests
-        run: kubectl apply-f  ${{ env.TASK_PATH }}/manifests
+        run: kubectl apply -f  ${{ env.TASK_PATH }}/manifests
 
       - name: Wait for pods to be ready
         run: kubectl wait deployment -n default deployment-with-4-pods --for=condition=Available --timeout=1m
