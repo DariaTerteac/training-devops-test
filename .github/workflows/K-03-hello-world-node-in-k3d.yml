@@ -50,12 +50,13 @@ jobs:
 
       - name: Check image existence
         run: |
-         if [ -n "$(docker images -q $IMAGE_NAME)" ]; then
+         if [ -n "$(docker images -q ${{ env.IMAGE_NAME }})" ]; then
            echo "Image ${{ env.IMAGE_NAME }} exists"
           else
            echo "Image ${{ env.IMAGE_NAME }} does not exist"
            exit 1
           fi
+
       - name: Apply manifest
         run: kubectl apply -f  ${{ env.TASK_PATH }}/manifests
 
